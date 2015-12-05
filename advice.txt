@@ -1,0 +1,438 @@
+Advice cheat sheet
+
+================================================================================
+
+Advising a function creates a combined function from the original function
+(ORIGFUN) and the advice function (ADVICE) like this:
+
+:before         (lambda (&rest r) (apply ADVICE r) (apply ORIGFUN r))
+:after          (lambda (&rest r) (prog1 (apply ORIGFUN r) (apply ADVICE r)))
+:around         (lambda (&rest r) (apply ADVICE ORIGFUN r))
+:override       (lambda (&rest r) (apply ADVICE r))
+:before-while   (lambda (&rest r) (and (apply ADVICE r) (apply ORIGFUN r)))
+:before-until   (lambda (&rest r) (or  (apply ADVICE r) (apply ORIGFUN r)))
+:after-while    (lambda (&rest r) (and (apply ORIGFUN r) (apply ADVICE r)))
+:after-until    (lambda (&rest r) (or  (apply ORIGFUN r) (apply ADVICE r)))
+:filter-args    (lambda (&rest r) (apply ORIGFUN (funcall ADVICE r)))
+:filter-return  (lambda (&rest r) (funcall ADVICE (apply ORIGFUN r)))
+
+================================================================================
+
+Override/alter the interactive spec of an advised function in one of three ways:
+
+  (define-advice FUNCNAME (...)
+    "..."
+    (interative ...)  ;; Replaces interactive spec of the advised function.
+    MY-ADVICE)
+
+  (define-advice FUNCNAME (...)
+    "..."
+    (interactive (lambda (orig-interactive-spec)
+                   MY-CODE
+                   (advice-eval-interactive-spec orig-interactive-spec)))
+    MY-ADVICE)
+
+  (define-advice FUNCNAME (...)
+    "..."
+    (interactive '(0 1 2 ...))  ;; Must match number of required arguments.
+    PROMPT-AND-SET-ARGUMENTS
+    MY-ADVICE)
+
+=================================================================================
+
+12.10 Advising Emacs Lisp Functions
+===================================
+
+When you need to modify a function defined in another library, or when
+you need to modify a hook like `FOO-function', a process filter, or
+basically any variable or object field which holds a function value,
+you can use the appropriate setter function, such as `fset' or `defun'
+for named functions, `setq' for hook variables, or `set-process-filter'
+for process filters, but those are often too blunt, completely throwing
+away the previous value.
+
+   The "advice" feature lets you add to the existing definition of a
+function, by "advising the function".  This is a cleaner method than
+redefining the whole function.
+
+   Emacs's advice system provides two sets of primitives for that: the
+core set, for function values held in variables and object fields (with
+the corresponding primitives being `add-function' and
+`remove-function') and another set layered on top of it for named
+functions (with the main primitives being `advice-add' and
+`advice-remove').
+
+   For example, in order to trace the calls to the process filter of a
+process PROC, you could use:
+
+     (defun my-tracing-function (proc string)
+       (message "Proc %S received %S" proc string))
+
+     (add-function :before (process-filter PROC) #'my-tracing-function)
+
+   This will cause the process's output to be passed to
+`my-tracing-function' before being passed to the original process
+filter.  `my-tracing-function' receives the same arguments as the
+original function.  When you're done with it, you can revert to the
+untraced behavior with:
+
+     (remove-function (process-filter PROC) #'my-tracing-function)
+
+   Similarly, if you want to trace the execution of the function named
+`display-buffer', you could use:
+
+     (defun his-tracing-function (orig-fun &rest args)
+       (message "display-buffer called with args %S" args)
+       (let ((res (apply orig-fun args)))
+         (message "display-buffer returned %S" res)
+         res))
+
+     (advice-add 'display-buffer :around #'his-tracing-function)
+
+   Here, `his-tracing-function' is called instead of the original
+function and receives the original function (additionally to that
+function's arguments) as argument, so it can call it if and when it
+needs to.  When you're tired of seeing this output, you can revert to
+the untraced behavior with:
+
+     (advice-remove 'display-buffer #'his-tracing-function)
+
+   The arguments `:before' and `:around' used in the above examples
+specify how the two functions are composed, since there are many
+different ways to do it.  The added function is also called a piece of
+_advice_.
+
+12.10.1 Primitives to manipulate advices
+----------------------------------------
+
+ -- Macro: add-function where place function &optional props
+     This macro is the handy way to add the advice FUNCTION to the
+     function stored in PLACE (*note Generalized Variables::).
+
+     WHERE determines how FUNCTION is composed with the existing
+     function, e.g., whether FUNCTION should be called before, or after
+     the original function.  *Note Advice combinators::, for the list of
+     available ways to compose the two functions.
+
+     When modifying a variable (whose name will usually end with
+     `-function'), you can choose whether FUNCTION is used globally or
+     only in the current buffer: if PLACE is just a symbol, then
+     FUNCTION is added to the global value of PLACE.  Whereas if PLACE
+     is of the form `(local SYMBOL)', where SYMBOL is an expression
+     which returns the variable name, then FUNCTION will only be added
+     in the current buffer.  Finally, if you want to modify a lexical
+     variable, you will have to use `(var VARIABLE)'.
+
+     Every function added with `add-function' can be accompanied by an
+     association list of properties PROPS.  Currently only two of those
+     properties have a special meaning:
+
+    `name'
+          This gives a name to the advice, which `remove-function' can
+          use to identify which function to remove.  Typically used
+          when FUNCTION is an anonymous function.
+
+    `depth'
+          This specifies how to order the advice, should several pieces
+          of advice be present.  By default, the depth is 0.  A depth
+          of 100 indicates that this piece of advice should be kept as
+          deep as possible, whereas a depth of -100 indicates that it
+          should stay as the outermost piece.  When two pieces of
+          advice specify the same depth, the most recently added one
+          will be outermost.
+
+          For `:before' advice, being outermost means that this advice
+          will be run first, before any other advice, whereas being
+          innermost means that it will run right before the original
+          function, with no other advice run between itself and the
+          original function.  Similarly, for `:after' advice innermost
+          means that it will run right after the original function,
+          with no other advice run in between, whereas outermost means
+          that it will be run right at the end after all other advice.
+          An innermost `:override' piece of advice will only override
+          the original function and other pieces of advice will apply
+          to it, whereas an outermost `:override' piece of advice will
+          override not only the original function but all other advice
+          applied to it as well.
+
+     If FUNCTION is not interactive, then the combined function will
+     inherit the interactive spec, if any, of the original function.
+     Else, the combined function will be interactive and will use the
+     interactive spec of FUNCTION.  One exception: if the interactive
+     spec of FUNCTION is a function (rather than an expression or a
+     string), then the interactive spec of the combined function will
+     be a call to that function with as sole argument the interactive
+     spec of the original function.  To interpret the spec received as
+     argument, use `advice-eval-interactive-spec'.
+
+     Note: The interactive spec of FUNCTION will apply to the combined
+     function and should hence obey the calling convention of the
+     combined function rather than that of FUNCTION.  In many cases, it
+     makes no difference since they are identical, but it does matter
+     for `:around', `:filter-args', and `filter-return', where FUNCTION.
+
+ -- Macro: remove-function place function
+     This macro removes FUNCTION from the function stored in PLACE.
+     This only works if FUNCTION was added to PLACE using
+     `add-function'.
+
+     FUNCTION is compared with functions added to PLACE using `equal',
+     to try and make it work also with lambda expressions.  It is
+     additionally compared also with the `name' property of the
+     functions added to PLACE, which can be more reliable than
+     comparing lambda expressions using `equal'.
+
+ -- Function: advice-function-member-p advice function-def
+     Return non-`nil' if ADVICE is already in FUNCTION-DEF.  Like for
+     `remove-function' above, instead of ADVICE being the actual
+     function, it can also be the `name' of the piece of advice.
+
+ -- Function: advice-function-mapc f function-def
+     Call the function F for every piece of advice that was added to
+     FUNCTION-DEF.  F is called with two arguments: the advice function
+     and its properties.
+
+ -- Function: advice-eval-interactive-spec spec
+     Evaluate the interactive SPEC just like an interactive call to a
+     function with such a spec would, and then return the corresponding
+     list of arguments that was built.  E.g.,
+     `(advice-eval-interactive-spec "r\nP")' will return a list of
+     three elements, containing the boundaries of the region and the
+     current prefix argument.
+
+12.10.2 Advising Named Functions
+--------------------------------
+
+A common use of advice is for named functions and macros.  You could
+just use `add-function' as in:
+
+     (add-function :around (symbol-function 'FUN) #'his-tracing-function)
+
+   But you should use `advice-add' and `advice-remove' for that
+instead.  This separate set of functions to manipulate pieces of advice
+applied to named functions, offers the following extra features
+compared to `add-function': they know how to deal with macros and
+autoloaded functions, they let `describe-function' preserve the
+original docstring as well as document the added advice, and they let
+you add and remove advice before a function is even defined.
+
+   `advice-add' can be useful for altering the behavior of existing
+calls to an existing function without having to redefine the whole
+function.  However, it can be a source of bugs, since existing callers
+to the function may assume the old behavior, and work incorrectly when
+the behavior is changed by advice.  Advice can also cause confusion in
+debugging, if the person doing the debugging does not notice or
+remember that the function has been modified by advice.
+
+   For these reasons, advice should be reserved for the cases where you
+cannot modify a function's behavior in any other way.  If it is
+possible to do the same thing via a hook, that is preferable (*note
+Hooks::).  If you simply want to change what a particular key does, it
+may be better to write a new command, and remap the old command's key
+bindings to the new one (*note Remapping Commands::).  In particular,
+Emacs's own source files should not put advice on functions in Emacs.
+(There are currently a few exceptions to this convention, but we aim to
+correct them.)
+
+   Special forms (*note Special Forms::) cannot be advised, however
+macros can be advised, in much the same way as functions.  Of course,
+this will not affect code that has already been macro-expanded, so you
+need to make sure the advice is installed before the macro is expanded.
+
+   It is possible to advise a primitive (*note What Is a Function::),
+but one should typically _not_ do so, for two reasons.  Firstly, some
+primitives are used by the advice mechanism, and advising them could
+cause an infinite recursion.  Secondly, many primitives are called
+directly from C, and such calls ignore advice; hence, one ends up in a
+confusing situation where some calls (occurring from Lisp code) obey
+the advice and other calls (from C code) do not.
+
+ -- Macro: define-advice symbol (where lambda-list &optional name
+          depth) &rest body
+     This macro defines a piece of advice and adds it to the function
+     named SYMBOL.  The advice is an anonymous function if NAME is nil
+     or a function named `symbol@name'.  See `advice-add' for
+     explanation of other arguments.
+
+ -- Function: advice-add symbol where function &optional props
+     Add the advice FUNCTION to the named function SYMBOL.  WHERE and
+     PROPS have the same meaning as for `add-function' (*note Core
+     Advising Primitives::).
+
+ -- Function: advice-remove symbol function
+     Remove the advice FUNCTION from the named function SYMBOL.
+     FUNCTION can also be the `name' of a piece of advice.
+
+ -- Function: advice-member-p function symbol
+     Return non-`nil' if the advice FUNCTION is already in the named
+     function SYMBOL.  FUNCTION can also be the `name' of a piece of
+     advice.
+
+ -- Function: advice-mapc function symbol
+     Call FUNCTION for every piece of advice that was added to the
+     named function SYMBOL.  FUNCTION is called with two arguments: the
+     advice function and its properties.
+
+12.10.3 Ways to compose advice
+------------------------------
+
+Here are the different possible values for the WHERE argument of
+`add-function' and `advice-add', specifying how the advice FUNCTION and
+the original function should be composed.
+
+`:before'
+     Call FUNCTION before the old function.  Both functions receive the
+     same arguments, and the return value of the composition is the
+     return value of the old function.  More specifically, the
+     composition of the two functions behaves like:
+          (lambda (&rest r) (apply FUNCTION r) (apply OLDFUN r))
+     `(add-function :before FUNVAR FUNCTION)' is comparable for
+     single-function hooks to `(add-hook 'HOOKVAR FUNCTION)' for normal
+     hooks.
+
+`:after'
+     Call FUNCTION after the old function.  Both functions receive the
+     same arguments, and the return value of the composition is the
+     return value of the old function.  More specifically, the
+     composition of the two functions behaves like:
+          (lambda (&rest r) (prog1 (apply OLDFUN r) (apply FUNCTION r)))
+     `(add-function :after FUNVAR FUNCTION)' is comparable for
+     single-function hooks to `(add-hook 'HOOKVAR FUNCTION 'append)'
+     for normal hooks.
+
+`:override'
+     This completely replaces the old function with the new one.  The
+     old function can of course be recovered if you later call
+     `remove-function'.
+
+`:around'
+     Call FUNCTION instead of the old function, but provide the old
+     function as an extra argument to FUNCTION.  This is the most
+     flexible composition.  For example, it lets you call the old
+     function with different arguments, or many times, or within a
+     let-binding, or you can sometimes delegate the work to the old
+     function and sometimes override it completely.  More specifically,
+     the composition of the two functions behaves like:
+          (lambda (&rest r) (apply FUNCTION OLDFUN r))
+
+`:before-while'
+     Call FUNCTION before the old function and don't call the old
+     function if FUNCTION returns `nil'.  Both functions receive the
+     same arguments, and the return value of the composition is the
+     return value of the old function.  More specifically, the
+     composition of the two functions behaves like:
+          (lambda (&rest r) (and (apply FUNCTION r) (apply OLDFUN r)))
+     `(add-function :before-while FUNVAR FUNCTION)' is comparable for
+     single-function hooks to `(add-hook 'HOOKVAR FUNCTION)' when
+     HOOKVAR is run via `run-hook-with-args-until-failure'.
+
+`:before-until'
+     Call FUNCTION before the old function and only call the old
+     function if FUNCTION returns `nil'.  More specifically, the
+     composition of the two functions behaves like:
+          (lambda (&rest r) (or (apply FUNCTION r) (apply OLDFUN r)))
+     `(add-function :before-until FUNVAR FUNCTION)' is comparable for
+     single-function hooks to `(add-hook 'HOOKVAR FUNCTION)' when
+     HOOKVAR is run via `run-hook-with-args-until-success'.
+
+`:after-while'
+     Call FUNCTION after the old function and only if the old function
+     returned non-`nil'.  Both functions receive the same arguments,
+     and the return value of the composition is the return value of
+     FUNCTION.  More specifically, the composition of the two functions
+     behaves like:
+          (lambda (&rest r) (and (apply OLDFUN r) (apply FUNCTION r)))
+     `(add-function :after-while FUNVAR FUNCTION)' is comparable for
+     single-function hooks to `(add-hook 'HOOKVAR FUNCTION 'append)'
+     when HOOKVAR is run via `run-hook-with-args-until-failure'.
+
+`:after-until'
+     Call FUNCTION after the old function and only if the old function
+     returned `nil'.  More specifically, the composition of the two
+     functions behaves like:
+          (lambda (&rest r) (or  (apply OLDFUN r) (apply FUNCTION r)))
+     `(add-function :after-until FUNVAR FUNCTION)' is comparable for
+     single-function hooks to `(add-hook 'HOOKVAR FUNCTION 'append)'
+     when HOOKVAR is run via `run-hook-with-args-until-success'.
+
+`:filter-args'
+     Call FUNCTION first and use the result (which should be a list) as
+     the new arguments to pass to the old function.  More specifically,
+     the composition of the two functions behaves like:
+          (lambda (&rest r) (apply OLDFUN (funcall FUNCTION r)))
+
+`:filter-return'
+     Call the old function first and pass the result to FUNCTION.  More
+     specifically, the composition of the two functions behaves like:
+          (lambda (&rest r) (funcall FUNCTION (apply OLDFUN r)))
+
+12.10.4 Adapting code using the old defadvice
+---------------------------------------------
+
+A lot of code uses the old `defadvice' mechanism, which is largely made
+obsolete by the new `advice-add', whose implementation and semantics is
+significantly simpler.
+
+   An old piece of advice such as:
+
+     (defadvice previous-line (before next-line-at-end
+                                      (&optional arg try-vscroll))
+       "Insert an empty line when moving up from the top line."
+       (if (and next-line-add-newlines (= arg 1)
+                (save-excursion (beginning-of-line) (bobp)))
+           (progn
+             (beginning-of-line)
+             (newline))))
+
+   could be translated in the new advice mechanism into a plain
+function:
+
+     (defun previous-line--next-line-at-end (&optional arg try-vscroll)
+       "Insert an empty line when moving up from the top line."
+       (if (and next-line-add-newlines (= arg 1)
+                (save-excursion (beginning-of-line) (bobp)))
+           (progn
+             (beginning-of-line)
+             (newline))))
+
+   Obviously, this does not actually modify `previous-line'.  For that
+the old advice needed:
+     (ad-activate 'previous-line)
+   whereas the new advice mechanism needs:
+     (advice-add 'previous-line :before #'previous-line--next-line-at-end)
+
+   Note that `ad-activate' had a global effect: it activated all pieces
+of advice enabled for that specified function.  If you wanted to only
+activate or deactivate a particular piece, you needed to _enable_ or
+_disable_ it with `ad-enable-advice' and `ad-disable-advice'.  The new
+mechanism does away with this distinction.
+
+   Around advice such as:
+
+     (defadvice foo (around foo-around)
+       "Ignore case in `foo'."
+       (let ((case-fold-search t))
+         ad-do-it))
+     (ad-activate 'foo)
+
+   could translate into:
+
+     (defun foo--foo-around (orig-fun &rest args)
+       "Ignore case in `foo'."
+       (let ((case-fold-search t))
+         (apply orig-fun args)))
+     (advice-add 'foo :around #'foo--foo-around)
+
+   Regarding the advice's _class_, note that the new `:before' is not
+quite equivalent to the old `before', because in the old advice you
+could modify the function's arguments (e.g., with `ad-set-arg'), and
+that would affect the argument values seen by the original function,
+whereas in the new `:before', modifying an argument via `setq' in the
+advice has no effect on the arguments seen by the original function.
+When porting `before' advice which relied on this behavior, you'll need
+to turn it into new `:around' or `:filter-args' advice instead.
+
+   Similarly old `after' advice could modify the returned value by
+changing `ad-return-value', whereas new `:after' advice cannot, so when
+porting such old `after' advice, you'll need to turn it into new
+`:around' or `:filter-return' advice instead.

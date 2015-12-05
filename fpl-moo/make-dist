@@ -1,0 +1,38 @@
+#!/bin/sh
+
+ME=`basename $0`
+
+echo -n "Enter version number in form X.Y.Z: "
+read version
+
+echo -n "Version is \"$version\".  Proceed? (y/n) "
+read ans
+
+if [ "$ans" != "y" ]
+then
+	echo "Aborted."
+	exit 0
+fi
+
+echo
+
+VERFILE="THIS-IS-VERSION-$version"
+TARFILE="fpl-moo-$version.tar.gz"
+ZIPFILE="fpl-moo-$version.zip"
+FILES="README.TXT THIS-IS-VERSION-$version fpl-moo.el fpl-react.el"
+
+rm -f THIS-IS-VERSION-* "$TARFILE" "$ZIPFILE"
+
+touch "$VERFILE"
+
+echo "Creating $TARFILE ..."
+echo
+tar zcvf "$TARFILE" $FILES
+echo
+
+echo "Creating $ZIPFILE ..."
+echo
+zip "$ZIPFILE" $FILES
+
+echo
+ls -l "$VERFILE" "$TARFILE" "$ZIPFILE"

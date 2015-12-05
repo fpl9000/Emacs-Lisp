@@ -1,0 +1,66 @@
+\373 = will
+\374 = won't
+\375 = do
+\376 = don't
+\377 = iac
+
+Option values:
+
+^A (1)  = echo
+^C (3)  = suppress-go-ahead
+^E (5)  = status
+^R (18) = logout
+^W (23) = send-location
+^X (24) = terminal-type
+^Y (25) = end-of-record
+^_ (31) = naws
+ ! (33) = toggle-flow-control
+ ' (39) = new-environ
+ # (35) = x-display-location (xdisploc)
+ $ (36) = 
+SP (32) = terminal-speed
+\377 = extented-options-list (exopl)
+
+======================================================================
+recv:
+
+ÿý	do terminal-type
+ÿý 	do terminal-speed
+ÿý#	do xdisploc
+ÿý$	do 36
+----------------------------------------------------------------------
+send: ÿüÿü ÿü#ÿü$
+
+ÿü	won't terminal-type
+ÿü 	won't terminal-speed
+ÿü#	won't xdisploc
+ÿü$	won't 36
+======================================================================
+recv:
+
+ÿû	will suppress-go-ahead
+ÿý	do echo
+ÿý	do naws
+ÿû	will status
+ÿý!	do toggle-flow-control
+----------------------------------------------------------------------
+send: ÿýÿüÿþÿüÿþÿü!
+
+ÿý	do suppress-go-ahead
+ÿü	won't echo
+ÿü	won't naws
+ÿþ	don't status
+ÿü!	won't toggle-flow-control
+======================================================================
+recv:
+
+ÿû	will terminal-type
+ÿû	will echo
+
+IRIX System V.4 (world) ...
+----------------------------------------------------------------------
+send: ÿþÿþ
+
+ÿþ	don't terminal-type
+ÿþ	don't echo
+======================================================================
