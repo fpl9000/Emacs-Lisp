@@ -18,11 +18,7 @@
 					    "-alo"
 					  "-alG")
       dired-ls-F-marks-symlinks		t
-
-      ;; Pass --dired to /bin/ls, except on Solaris where that switch isn't
-      ;; supported.  ISSUE: Is this ignored by ls-lisp.el?
-      dired-use-ls-dired		'unspecified   ;; (not (or my-solaris my-bsd))
-      )
+      dired-use-ls-dired		'unspecified)
 
 ;; Silence byte-compiler warnings about these variables not being defined
 ;; on non-Windows systems.

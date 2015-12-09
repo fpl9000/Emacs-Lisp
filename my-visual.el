@@ -112,7 +112,9 @@ faces (yet)."
 
 (defun my-font-lock-buttonizer (limit)
   "A function called via my-font-lock-universal-keywords to buttonize URLs.
-ISSUE: These buttons remain in the buffer even if Font Lock mode is turned off!"
+Because this function calls make-text-button, the button is created by adding text
+properties to the text, which mean these buttons remain in the buffer even if Font Lock
+mode is turned off!"
   (save-excursion
     (while (re-search-forward "\\(ftp\\|file\\|https?\\)://[^ \t\r\n'\"]+" limit t)
       (make-text-button (match-beginning 0) (match-end 0)

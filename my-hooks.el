@@ -20,6 +20,7 @@
 (require 'info)
 (require 'shell)
 (require 'python)
+(require 'sh-script)
 
 (eval-after-load "ange-ftp"
   '(progn
