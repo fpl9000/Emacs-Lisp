@@ -116,8 +116,8 @@ Because this function calls make-text-button, the button is created by adding te
 properties to the text, which mean these buttons remain in the buffer even if Font Lock
 mode is turned off!"
   (save-excursion
-    (while (re-search-forward "\\(ftp\\|file\\|https?\\)://[^ \t\r\n'\"]+" limit t)
-      (make-text-button (match-beginning 0) (match-end 0)
+    (while (re-search-forward "\\(\\(ftp\\|file\\|https?\\)://[^ )\t\r\n'\"]+\\)[].,!;]?" limit t)
+      (make-text-button (match-beginning 1) (match-end 1)
 			'face 'my-url-face
 			'mouse-face 'my-url-mouse-face
 			'help-echo "mouse-2, RET: Fetch this URL"
