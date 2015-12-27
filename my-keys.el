@@ -44,7 +44,7 @@
 (define-key global-map (kbd "C-M-<f12>")	'my-revert-log-file-unconditionally)
 
 ;; Mouse-1 bindings ...
-(define-key global-map (kbd "<C-M-mouse-1>")	'browse-url-at-mouse)
+(define-key global-map (kbd "<C-mouse-1>")	'browse-url-at-mouse)
 (define-key global-map (kbd "<mode-line S-mouse-2>") 'my-mouse-split-window-vertically)
 (define-key global-map (kbd "C-z <mouse-1>")	'mouse-set-font)
 

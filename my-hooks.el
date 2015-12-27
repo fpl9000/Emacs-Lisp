@@ -891,9 +891,10 @@ killed."
 	sh-basic-offset 8
 	sh-indent-after-switch 0
 	sh-indent-after-case 0
+	sh-indent-for-case-label 0
 	sh-indent-after-continuation 'always)
 
-  (set-fill-column 82)
+  (set-fill-column 100)
 
   (my-n-column-tabs 8)
 

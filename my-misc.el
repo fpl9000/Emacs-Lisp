@@ -319,7 +319,8 @@ when used around the body of a dolist or while form, for example:
 		  (looking-at-p my-word-regexp))
 	(backward-char 1))
 
-      (forward-char 1)
+      (if (not (looking-at-p my-word-regexp))
+	  (forward-char 1))
       (push-mark)
 
       (while (and (not (eobp))
