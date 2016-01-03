@@ -143,7 +143,8 @@ mode is turned off!"
     ("QUESTION:" 0 'font-lock-warning-face t)
     ("ATTENTION[:!]+" 0 'font-lock-warning-face t)
     ("![A-Z0-9][A-Z0-9-]+" 0 'my-replaceable-field-face nil)
-    ("TODO:" 0 'font-lock-warning-face t))
+    ("TODO:" 0 'font-lock-warning-face t)
+    ("\\b[a-fA-F0-9]\\{40\\}\\b" 0 'my-sha1-hash-face))
   "These are Font-Lock keyword entries that are always appended to the value of
 font-lock-keywords in every buffer (see function my-font-lock-post-command-hook).")
 
@@ -303,6 +304,8 @@ Emacs with -batch when byte-compiling all of my Elisp files."
   (make-face 'my-highlight-line-face)
   (set-face-background 'my-highlight-line-face "#00a")
   (set-face-foreground 'my-highlight-line-face "yellow")
+
+  (set-face-foreground (make-face 'my-sha1-hash-face) "#fac")
 
   (make-face 'my-shell-mode-input-face)
   (set-face-foreground 'my-shell-mode-input-face "#faf")
