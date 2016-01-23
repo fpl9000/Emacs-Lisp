@@ -384,8 +384,10 @@ completion when point is not at the end of the minibuffer."
 
 (define-advice dired (:filter-args (args) my-ad-filter-args-dired)
   "Support for Cygwin pathnames (e.g., /tmp, /, /usr/bin, /c/apps, /e/music, etc.)."
-  (cons (my-cygwin-pathname-to-emacs-pathname (car args))
-	(cdr args)))
+  (let ((my-pathname (my-cygwin-pathname-to-emacs-pathname (car args))))
+    (if (not (file-directory-p my-pathname))
+	(error "Directory not found: %s" (car args)))
+    (cons my-pathname (cdr args))))
 
 (define-advice dired-find-file (:around (origfun &rest args) my-ad-around-dired-find-file)
   "Support for Cygwin symlinks in Dired mode."

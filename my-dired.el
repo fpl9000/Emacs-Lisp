@@ -264,13 +264,13 @@ dired-mode-map.  This hook also runs when vc-dired-mode starts."
 	      (forward-line 2)
 	      (sort-regexp-fields nil (concat "^.*" my-dired-date-regexp "\\(.*\\)$") "\\1" (point) (point-max))))
 
-	;; Get rid of all '+' characters showing the presence of non-UNIX ACLs.
-	(save-excursion
-	  (goto-char (point-min))
-	  (when (search-forward-regexp "^............\\+ " nil t)
-	    (goto-char (point-min))
-	    (while (search-forward-regexp "^............\\(.\\) " nil t)
-	      (replace-match "" nil nil nil 1))))
+;;	;; Get rid of all '+' characters showing the presence of non-UNIX ACLs.
+;;	(save-excursion
+;;	  (goto-char (point-min))
+;;	  (when (search-forward-regexp "^............\\+ " nil t)
+;;	    (goto-char (point-min))
+;;	    (while (search-forward-regexp "^............\\(.\\) " nil t)
+;;	      (replace-match "" nil nil nil 1))))
 
 	;; Clean up the Dired buffer if it's excessively wide due to the owner of my home directory
 	;; under Cygwin.  NOTE: This assumes the length of user-login-name is always less than the
