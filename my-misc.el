@@ -1282,6 +1282,8 @@ area."
 *vc-diff*, *Apropos*, and all Man-mode buffers.	 Also buries all buffers whose names
 start with '*', .newsrc-dribble, sent-usenet, and gnus-mbox."
   (interactive)
+  (my-list-buffers)  ;; Seems to avoid the below 'Non-string bufname' error.
+
   (dolist (buffer (buffer-list))
     (let ((bufname (buffer-name buffer)))
       (if (not (stringp bufname))
