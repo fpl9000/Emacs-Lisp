@@ -387,6 +387,8 @@ completion when point is not at the end of the minibuffer."
   (let ((my-pathname (my-cygwin-pathname-to-emacs-pathname (car args))))
     (if (not (file-directory-p my-pathname))
 	(error "Directory not found: %s" (car args)))
+    (if (null (ignore-errors (directory-files-and-attributes my-pathname)))
+	(error "Directory is not readable: %s" (car args)))
     (cons my-pathname (cdr args))))
 
 (define-advice dired-find-file (:around (origfun &rest args) my-ad-around-dired-find-file)

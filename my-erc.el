@@ -936,8 +936,7 @@ probably query buffers too)."
       (setq mode-line-format nil))
 
   ;; Set up variable hooks that need to be local to ERC buffers.
-  ;; QUESTION: Maybe use window-size-change-functions instead of window-configuration-change-hook?
-  (add-hook 'window-configuration-change-hook 'my-erc-window-configuration-change-hook nil 'local)
+  (add-hook 'window-size-change-functions 'my-erc-window-size-change-functions nil 'local)
 
   (add-hook 'post-command-hook 'my-erc-post-command-hook nil 'local))
 
@@ -975,9 +974,9 @@ probably query buffers too)."
 
 (add-hook 'erc-dcc-chat-connect-hook 'my-erc-dcc-chat-connect-hook)
 
-(defun my-erc-window-configuration-change-hook ()
-  "Added to window-configuration-change-hook locally in ERC buffers.  This re-fills the
-text in ERC buffers when the window geometry changes.  From the docstring for the hook:
+(defun my-erc-window-size-change-functions ()
+  "Added to window-size-change-functions locally in ERC buffers.  This re-fills the text
+in ERC buffers when the window geometry changes.  From the docstring for the hook:
 
 The buffer-local part is run once per window, with the relevant window selected; while the
 global part is run only once for the modified frame, with the relevant frame selected."
