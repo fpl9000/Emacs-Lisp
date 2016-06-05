@@ -13,7 +13,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (require 'cc-mode)
-(require 'csharp-mode)
+(require 'csharp-mode)	;; Update this from https://github.com/josteink/csharp-mode.git
 (require 'sgml-mode)
 (require 'ielm)
 (require 'comint)
@@ -342,7 +342,7 @@ the symbol major-mode against 'c-mode or 'c++-mode."
   ;; 1. They need to apply to text that is unfontified after all other processing.
   ;;
   ;; 2. They need to override already-fontified text and putting them in the above set
-  ;;	doesn't work.  In this case, set the override flag to t in the entry.
+  ;;    doesn't work.  In this case, set the override flag to t in the entry.
 
   (font-lock-add-keywords
    nil

@@ -88,7 +88,7 @@
 ;; Speed up TRAMP by putting auto-save files in a local directory instead of
 ;; writing them back to the remote host.  TRAMP makes this directory if it
 ;; does not exist.
-(setq tramp-verbose 3
+(setq tramp-verbose 2
       tramp-auto-save-directory "~/.emacs.d/tramp-autosave")
 
 ;; On Windows, use method sshx, because method ssh doesn't force SSH to allocate

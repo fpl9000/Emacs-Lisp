@@ -2,12 +2,19 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
-;; Bugs/issues:
-;;
-;; o my-erc-make-frame-devoted needs to set the frame title.
+;; Issues/Questions:
 ;;
 ;; o Does killing a channel buffer with "C-x k RET" or from the Buffer Menu properly
 ;;   part the channel and close the devoted frame?
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; Bugs:
+;;
+;; o /PART parts the channel but does not delete the channel buffer or close the
+;;   devoted frame.
+;;
+;; o my-erc-make-frame-devoted needs to set the frame title.
 ;;
 ;; o Closing a devoted frame with the mouse leaves the ERC buffer in existence.  Is
 ;;   there a hook that runs when frames are closed?  If so, use it to kill the ERC
@@ -92,10 +99,35 @@
 (require 'erc-fill)
 (require 'erc-notify)
 (require 'erc-netsplit)
+(require 'erc-sasl)     ;; See ~/elisp/erc-sasl.el.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Patches.  Remove these if/when they are merged into the official sources.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Patched version of erc-login to work with erc-sasl.el.  See
+;; https://www.emacswiki.org/emacs/ErcSASL for details.
+(defun erc-login ()
+  "Perform user authentication at the IRC server."
+  (erc-log (format "login: nick: %s, user: %s %s %s :%s"
+		   (erc-current-nick)
+		   (user-login-name)
+		   (or erc-system-name (system-name))
+		   erc-session-server
+		   erc-session-user-full-name))
+  (if erc-session-password
+      (erc-server-send (format "PASS %s" erc-session-password))
+    (message "Logging in without password"))
+  (when (and (featurep 'erc-sasl) (erc-sasl-use-sasl-p))
+    (erc-server-send "CAP REQ :sasl"))
+  (erc-server-send (format "NICK %s" (erc-current-nick)))
+  (erc-server-send
+   (format "USER %s %s %s :%s"
+	   ;; hacked - S.B.
+	   (if erc-anonymous-login erc-email-userid (user-login-name))
+	   "0" "*"
+	   erc-session-user-full-name))
+  (erc-update-mode-line))
 
 (defun erc-kill-channel ()
   "Sends a PART command to the server when the channel buffer is killed.
@@ -152,7 +184,7 @@ or `erc-kill-buffer-hook' if any other buffer."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (makunbound 'my-erc-default-networkid)
-(defvar my-erc-default-networkid "Freenode SSL Any"
+(defvar my-erc-default-networkid "Freenode Any"
   "...")
 
 (makunbound 'my-erc-networks)
@@ -161,7 +193,7 @@ or `erc-kill-buffer-hook' if any other buffer."
      ;; Freenode servers listen on ports 6665-6667, 7000, 7070, and 8000-8002
      ;; SSL connections should be made to port 6697.
      ("localhost"       "localhost" 6667 nil nil)
-     ("Any"             "chat.freenode.net" 6667 nil nil)
+     ("Any"             "chat.freenode.net" 8002 nil nil)
      ("SSL Any"         "ssl:chat.freenode.net" 6697 nil nil)
      ("US"              "chat.us.freenode.net" 6667 nil nil)
      ("Dallas TX"       "asimov.freenode.net" 6667 nil nil)
@@ -386,6 +418,12 @@ my-erc-cleanup-channels.")
 (defvar my-erc-networks-alist nil
   "A list in the same format as erc-networks-alist that is logically prepended
 to erc-networks-alist.")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Set up SASL authentication.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(add-to-list 'erc-sasl-server-regexp-list ".*\\.freenode\\.net")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Change some messages in the English message catalog.
@@ -796,6 +834,13 @@ otherwise it calls erc-kill-input and then resets the buffer-modified flag."
       ;; Return the value returned by the advised function.
       my-retval)))
 
+(define-advice erc-open-network-stream (:override (name buffer host service)
+                                                  my-ad-override-erc-open-network-stream)
+  "Same as erc-open-network-stream but restricts the connection to use IPv4 only.  This is needed
+because Emacs seems to have trouble connecting to IPv6 addresses, especially at home."
+  (make-network-process :name name :buffer buffer :family 'ipv4
+                        :host host :service service :nowait t))
+
 (define-advice erc-pcomplete (:after (&rest args) my-ad-after-erc-pcomplete)
   "Removes the trailing space after a completed nick if the nick is not the first word on the
 input line."
@@ -914,10 +959,13 @@ probably query buffers too)."
   (local-set-key (kbd "M-w")            'my-erc-kill-ring-save)
 
   ;; Merge my-erc-networks-alist into erc-networks-alist.
-
+  ;; QUESTION: Why is this done here?  Does erc-networks-alist get reset periodically?
   (dolist (netinfo my-erc-networks-alist)
     (if (not (assoc (car netinfo) erc-networks-alist))
         (setq erc-networks-alist (cons netinfo erc-networks-alist))))
+
+  ;; Turn on Font-Lock mode.
+  (my-toggle-font-lock-mode 1)
 
   ;; Disable undo.
   (buffer-disable-undo)
@@ -936,7 +984,7 @@ probably query buffers too)."
       (setq mode-line-format nil))
 
   ;; Set up variable hooks that need to be local to ERC buffers.
-  (add-hook 'window-size-change-functions 'my-erc-window-size-change-functions nil 'local)
+  (add-hook 'window-size-change-functions 'my-erc-window-size-change-functions nil)
 
   (add-hook 'post-command-hook 'my-erc-post-command-hook nil 'local))
 
@@ -974,13 +1022,14 @@ probably query buffers too)."
 
 (add-hook 'erc-dcc-chat-connect-hook 'my-erc-dcc-chat-connect-hook)
 
-(defun my-erc-window-size-change-functions ()
+(defun my-erc-window-size-change-functions (frame)
   "Added to window-size-change-functions locally in ERC buffers.  This re-fills the text
 in ERC buffers when the window geometry changes.  From the docstring for the hook:
 
 The buffer-local part is run once per window, with the relevant window selected; while the
 global part is run only once for the modified frame, with the relevant frame selected."
-  (when (> (buffer-size) 0)
+  (when (and (eq major-mode 'erc-mode)
+             (> (buffer-size) 0))
     (ignore-errors (my-erc-refill-buffer))
     (ignore-errors (my-erc-position-prompt))))
 
@@ -993,7 +1042,7 @@ global part is run only once for the modified frame, with the relevant frame sel
         (add-text-properties (1- my-start-of-input) my-start-of-input '(intangible t))
 
         ;; Fontify my typed input.
-        (add-text-properties my-start-of-input (point-max) '(face erc-input-face))
+        (add-text-properties my-start-of-input (point-max) '(font-lock-face erc-input-face))
 
         ;; This check is an optimization that prevents a performance slowdown from the
         ;; below save-excursion/recenter code.
@@ -1203,10 +1252,12 @@ reason.  The server buffer is current when this function executes."
   "Added to erc-send-modify-hook."
   (save-excursion
     ;; Make the '<' and '>' characters around nicks have the same face as the nicks.
+    ;; QUESTION: What is needed on erc-send-modify-hook?  Is this for my outgoing
+    ;; channel messages?  If so, those don't appear anymore in ERC.
     (save-excursion
       (goto-char (point-min))
       (if (looking-at "^<[^>]+>")
-          (add-text-properties (point-min) (match-end 0) '(face erc-nick-default-face))))
+          (add-text-properties (point-min) (match-end 0) '(font-lock-face erc-nick-default-face))))
 
     (goto-char (point-min))
 
@@ -1214,7 +1265,7 @@ reason.  The server buffer is current when this function executes."
       (if (string= (md5 (downcase word) nil nil nil 'noerror)
                    "cf418e8cc469cd3297889424fb862272")
           (if (looking-at (concat "^.*\\(" word "\\)"))
-              (replace-match (propertize "..." 'face 'erc-input-face) nil nil nil 1)))))
+              (replace-match (propertize "..." 'font-lock-face 'erc-input-face) nil nil nil 1)))))
 
   (erc-fill))
 
@@ -1369,8 +1420,8 @@ got inserted."
      ((looking-at "^\\* \\(\\S-+\\) ")
       ;; My actions appear in erc-input-face; others' actions in erc-action-face.
       (if (string= (erc-current-nick) (match-string 1))
-          (add-text-properties (point-min) (point-max) '(face erc-input-face))
-        (add-text-properties (point-min) (point-max) '(face erc-action-face))))
+          (add-text-properties (point-min) (point-max) '(font-lock-face erc-input-face))
+        (add-text-properties (point-min) (point-max) '(font-lock-face erc-action-face))))
 
      ;; Nick changes ...
      ((looking-at "^\\*\\*\\* .* \\((.*) \\)is now known as ")
@@ -1379,7 +1430,7 @@ got inserted."
       (goto-char (point-min))
       (delete-char 4)
       (add-text-properties (point-min) (point-max)
-                           `(face my-erc-joinpart-face
+                           `(font-lock-face my-erc-joinpart-face
                              my-erc-timestamp ,(float-time (current-time)))))
 
      ;; Parts ...
@@ -1391,18 +1442,18 @@ got inserted."
         (replace-match "has left" nil nil nil 2)
         (replace-match "" nil nil nil 1)
         (add-text-properties (point-min) (point-max)
-                             `(face my-erc-joinpart-face
+                             `(font-lock-face my-erc-joinpart-face
                                my-erc-timestamp ,(float-time (current-time))))))
 
      ;; Quits ...
      ((looking-at "^\\(\\*\\*\\* \\).* \\((.*) \\)has quit: \\(.*\\)")
       (let* ((quitmsg (match-string 3))
              (cleanquitmsg (delete 34 (delete ?\\ quitmsg))))   ;; 34 == '"'
-        (replace-match (propertize cleanquitmsg 'face 'my-erc-quit-reason-face) nil nil nil 3)
+        (replace-match (propertize cleanquitmsg 'font-lock-face 'my-erc-quit-reason-face) nil nil nil 3)
         (replace-match "" nil nil nil 2)
         (replace-match "" nil nil nil 1)
         (add-text-properties (point-min) (point-max)
-                             `(face my-erc-joinpart-face
+                             `(font-lock-face my-erc-joinpart-face
                                my-erc-timestamp ,(float-time (current-time))))))
 
      ;; Joins ...
@@ -1411,7 +1462,7 @@ got inserted."
       (goto-char (point-min))
       (delete-char 4)
       (add-text-properties (point-min) (point-max)
-                           `(face my-erc-joinpart-face
+                           `(font-lock-face my-erc-joinpart-face
                              my-erc-timestamp ,(float-time (current-time)))))
 
 
@@ -1427,7 +1478,7 @@ got inserted."
       (if (looking-at "^.* \\((.*) \\)")
           (replace-match "" nil nil nil 1))
       (add-text-properties (point-min) (point-max)
-                           `(face my-erc-modechange-face
+                           `(font-lock-face my-erc-modechange-face
                              my-erc-timestamp ,(float-time (current-time)))))
 
      ;; Post-join mode info ...
@@ -1436,7 +1487,7 @@ got inserted."
 
      ;; /NOTIFY output ...
      ((looking-at-p "^\\*\\*\\* \\(Detected .* on\\|left\\) IRC")
-      (add-text-properties (point-min) (point-max) '(face my-erc-notify-face)))
+      (add-text-properties (point-min) (point-max) '(font-lock-face my-erc-notify-face)))
 
      ;; Kicks ...
      ((looking-at "^\\(\\*\\*\\* \\).* \\((.*) has kicked \\).*\\( off channel [^:]+\\):")
@@ -1444,7 +1495,7 @@ got inserted."
       (replace-match "kicks " nil nil nil 2)
       (replace-match "" nil nil nil 1)
       (add-text-properties (point-min) (point-max)
-                           `(face my-erc-kick-face
+                           `(font-lock-face my-erc-kick-face
                              my-erc-timestamp ,(float-time (current-time)))))
 
      ;; /NAMES output ...
@@ -1454,20 +1505,21 @@ got inserted."
 
      ;; Highlight the strings "trigger:" and "triggers:".
      ((looking-at "^.*\\(triggers?:\\)")
-      (add-text-properties (match-beginning 1) (match-end 1) '(face my-alert-face)))
+      (add-text-properties (match-beginning 1) (match-end 1) '(font-lock-face my-alert-face)))
 
      ;; Topic changes ...
      ;; *** bpt (~user@user86.net765.nc.sprint-hsd.net) has set the topic for #emacs: 
      ((looking-at "^\\(\\*\\*\\* \\).* \\(\\S-+ has set the topic for [^:]+:\\) \"\\(.*\\)\"")
       ;;((looking-at "^\\(\\*\\*\\* \\).* \\(has set the topic for [^:]+:\\) \"\\(.*\\)\"")
       (let ((my-newtopic (match-string 3)))
-        (replace-match (propertize "sets topic to:" 'face 'erc-notice-face) nil nil nil 2)
+        (replace-match (propertize "sets topic to:" 'font-lock-face 'erc-notice-face) nil nil nil 2)
         (replace-match "" nil nil nil 1)
         (goto-char (point-min))
         (setq erc-channel-topic my-newtopic)
         (my-erc-update-titlebar))))
 
     ;; This must be done _after_ the above modifications.
+    ;; QUESTION: Is this needed?  Variable erc-insert-modify-hook already contains erc-fill.
     (erc-fill)))
 
 (defun my-erc-insert-post-hook ()
@@ -1492,10 +1544,10 @@ to the just-inserted text."
     (save-excursion
       (goto-char (point-min))
       (if (looking-at "^<\\([^>]+\\)>")
-          ;;(add-text-properties (point-min) (match-end 0) '(face erc-nick-default-face))
+          ;;(add-text-properties (point-min) (match-end 0) '(font-lock-face erc-nick-default-face))
           (let* ((nick (buffer-substring-no-properties (match-beginning 1) (match-end 1)))
                  (nick-face (or (my-erc-nick-face nick) '(:forefound "red"))))
-            (add-text-properties (point-min) (match-end 0) `(face ,nick-face)))))
+            (add-text-properties (point-min) (match-end 0) `(font-lock-face ,nick-face)))))
 
     (let ((channel-name (erc-default-target))
           (active-buffer (window-buffer (selected-window)))
@@ -1567,7 +1619,7 @@ with the server buffer current."
         (with-current-buffer buf
           (if (eq major-mode 'erc-mode)
               (erc-display-line (propertize (format "+++ %s sets mode %s on %s" nick mode tgt)
-                                            'face 'my-erc-modechange-face)
+                                            'font-lock-face 'my-erc-modechange-face)
                                 (current-buffer))))))
   nil)
 
@@ -1729,8 +1781,8 @@ which causes ordinary channel messages to appear."
                             (if (or (null default-target)
                                     (erc-channel-p default-target))
                                 (propertize (concat "[" network "] *" sender "* " text)
-                                            'face 'erc-direct-msg-face)
-                              (concat "<" (propertize sender 'face 'erc-nick-default-face) "> "
+                                            'font-lock-face 'erc-direct-msg-face)
+                              (concat "<" (propertize sender 'font-lock-face 'erc-nick-default-face) "> "
                                       text))))
                     (erc-display-line text activebuf))
                   t)
@@ -1739,7 +1791,7 @@ which causes ordinary channel messages to appear."
                   ;; Put a message in the echo area.
                   (progn
                     (message (propertize (format "PRIVMSG from %s on %s" sender network)
-                                         'face 'my-alert-face))
+                                         'font-lock-face 'my-alert-face))
                     nil)
 
                 ;; The currently active buffer is not an ERC buffer, so save the /MSG
@@ -1752,7 +1804,7 @@ which causes ordinary channel messages to appear."
                     (goto-char (point-max))
                     (insert (my-erc-add-timestamp (propertize (concat "[" network "] *" sender "* "
                                                                       (erc-controls-interpret text))
-                                                              'face 'erc-direct-msg-face))
+                                                              'font-lock-face 'erc-direct-msg-face))
                             "\n")
                     (local-set-key (kbd "q") 'my-delete-window-and-bury-buffer)
                     (when (eq (get-buffer "*privmsg*") (window-buffer (selected-window)))
@@ -1769,7 +1821,7 @@ window."
          (sender (car (erc-parse-user (erc-response.sender parsed))))
          (network (my-erc-network))
          (text (propertize (concat "[" network "] -" sender "- " (erc-response.contents parsed))
-                           'face 'erc-direct-msg-face))
+                           'font-lock-face 'erc-direct-msg-face))
          chanbuf)
 
     (if (erc-channel-p target)
@@ -1791,7 +1843,7 @@ window."
               ;; Put a message in the echo area.
               (progn
                 (message (propertize (format "NOTICE from %s on %s" sender network)
-                                     'face 'my-alert-face))
+                                     'font-lock-face 'my-alert-face))
                 nil)
 
             ;; Pop up a buffer to display the NOTICE.
@@ -1801,7 +1853,7 @@ window."
                 (set-window-text-height nil 6)
                 (goto-char (point-max))
                 (insert (my-erc-add-timestamp (propertize (erc-controls-interpret text)
-                                                          'face 'erc-direct-msg-face))
+                                                          'font-lock-face 'erc-direct-msg-face))
                         "\n")
                 (local-set-key (kbd "q") 'my-delete-window-and-bury-buffer)
                 (forward-line -1)
@@ -1901,7 +1953,7 @@ no confirmation prompt is displayed."
   (if (erc-channel-p (erc-default-target))
       (erc-display-line (propertize (format "+++ %d users in this channel."
                                             (hash-table-count erc-channel-users))
-                                    'face '(:foreground "green"))
+                                    'font-lock-face '(:foreground "green"))
                         (current-buffer))))
         
 (defalias 'erc-cmd-C 'erc-cmd-COUNT)
@@ -1918,7 +1970,7 @@ no confirmation prompt is displayed."
 /dcc get NICK [FILE]            - Accept file-send offer from NICK
 /dcc list                       - List all offers and connections
 /dcc send NICK FILE             - Offer to send FILE to NICK\n"
-               'face 'my-alert-face)
+               'font-lock-face 'my-alert-face)
    'active)
   t)
 
@@ -2053,7 +2105,7 @@ string to be passed to erc-cmd-CLOSE (and ultimately to erc-cmd-QUIT)."
 
       (erc-display-line (propertize (format "+++ Set network name to \"%s\" (was \"%s\")." name
                                             my-orig-network-name)
-                                    'face 'my-alert-face)
+                                    'font-lock-face 'my-alert-face)
                         'active)))
   t)
 
@@ -2089,7 +2141,7 @@ string to be passed to erc-cmd-CLOSE (and ultimately to erc-cmd-QUIT)."
 
       (let ((string (mapconcat 'identity command " ")))
         (erc-display-line (concat (erc-make-notice "Sending: \"")
-                                  (propertize string 'face 'erc-input-face)
+                                  (propertize string 'font-lock-face 'erc-input-face)
                                   "\"")
                           (current-buffer))
         (process-send-string erc-server-process (concat string "\n")))))
@@ -2107,7 +2159,7 @@ string to be passed to erc-cmd-CLOSE (and ultimately to erc-cmd-QUIT)."
   "Makes it appear you are thinking WORDS."
   (erc-send-message (propertize (format ". o O ( %s )"
                                         (mapconcat 'identity words " "))
-                                'face 'erc-input-face))
+                                'font-lock-face 'erc-input-face))
   t)
 
 (add-to-list 'erc-noncommands-list 'erc-cmd-THINK)
@@ -2213,10 +2265,10 @@ oldest nick removed from the mapping and its face is reused."
         ;; No mapping found.
         (if my-erc-nick-channel-faces
             ;; Allocate an unused face.
-            (let ((face (nth (random (length my-erc-nick-channel-faces)) my-erc-nick-channel-faces)))
-              (setq my-erc-nick-faces-alist (cons (cons nick face) my-erc-nick-faces-alist))
-              (setq my-erc-nick-channel-faces (delete face my-erc-nick-channel-faces))
-              face)
+            (let ((my-face (nth (random (length my-erc-nick-channel-faces)) my-erc-nick-channel-faces)))
+              (setq my-erc-nick-faces-alist (cons (cons nick my-face) my-erc-nick-faces-alist))
+              (setq my-erc-nick-channel-faces (delete my-face my-erc-nick-channel-faces))
+              my-face)
 
           ;; Eject the oldest mapping from the alist.
           (let ((reclaimed-face (cdr (car (last my-erc-nick-faces-alist)))))
@@ -2586,7 +2638,7 @@ version suffix (e.g., \"<2>\").  BUFFER can also be a string."
 (defun my-erc-add-timestamp (text)
   "Prefixes TEXT with a timestamp.  Returns the timestamped text."
   (concat (propertize (concat "[" (time-stamp-string "%02H:%02M:%02S") "]")
-                      'face 'erc-timestamp-face)
+                      'font-lock-face 'erc-timestamp-face)
           " " text))
 
 (defun my-erc-debug-irc-protocol ()
@@ -2612,7 +2664,7 @@ a new frame.  Kill the *erc-protocol* buffer to stop logging."
 (defun my-erc-alert (string &rest args)
   "Displays (apply #'format STRING ARGS) in face 'my-alert-face in the current buffer
 if it is an ERC buffer, otherwise displays it in the minibuffer."
-  (let ((msg (propertize (apply #'format string args) 'face 'my-alert-face)))
+  (let ((msg (propertize (apply #'format string args) 'font-lock-face 'my-alert-face)))
     (if (eq major-mode 'erc-mode)
         (progn
           (goto-char (point-max))
@@ -2628,12 +2680,12 @@ if it is an ERC buffer, otherwise displays it in the minibuffer."
 
 (defun my-erc-alert-all-buffers-for-server (string &rest args)
   "Display an alert in every ERC buffer associated with the current server."
-  (let ((msg (propertize (apply #'format string args) 'face 'my-alert-face)))
+  (let ((msg (propertize (apply #'format string args) 'font-lock-face 'my-alert-face)))
     (erc-display-line msg 'all)))
 
 (defun my-erc-alert-all-buffers (string &rest args)
   "Display an alert in every ERC buffer associated with every server."
-  (let ((msg (propertize (apply #'format string args) 'face 'my-alert-face)))
+  (let ((msg (propertize (apply #'format string args) 'font-lock-face 'my-alert-face)))
     (dolist (server-buffer (erc-buffer-list 'erc-server-buffer-p))
       (with-current-buffer server-buffer
         (erc-display-line msg 'all)))))
@@ -2648,7 +2700,7 @@ normal ERC TAB processing can proceed."
         (insert (propertize (format "/msg %s " (or (with-current-buffer (erc-server-buffer)
                                                      my-erc-last-msg-sender)
                                                    (error "No nick available!")))
-                            'face 'erc-input-face))
+                            'font-lock-face 'erc-input-face))
         t)
 
     ;; ERC's standard nick completion doesn't cycle through available completions when
@@ -3322,7 +3374,7 @@ otherwise returns nil."
                        (string= (downcase (my-erc-network)) (downcase network)))
                   (error "You are already connected to network %s!" network)))))))
 
-  (let (use-tls serverframe serverbuffer)
+  (let (use-tls serverframe serverbuffer password)
 
     ;; If SERVER starts with "ssl:", use function erc-tls instead of erc to connect
     ;; to the server.
@@ -3383,6 +3435,16 @@ otherwise returns nil."
           my-erc-closing nil
           my-erc-exiting nil)
 
+    ;; If using SASL to authenticate to this server, read the password.  Do this
+    ;; after the above call to make-frame and select-frame, so the prompt appears in
+    ;; the devoted frame for the server buffer.
+    (setq password
+          (block my-read-sasl-password
+            (dolist (regexp erc-sasl-server-regexp-list)
+              (if (string-match-p regexp server)
+                  (return-from my-read-sasl-password
+                    (read-passwd (format "Enter password for server %s: " server)))))))
+
     ;; Connect to the IRC server.  Temporarilly bind function erc-get-buffer-create
     ;; to return the existing server buffer (if there is one), otherwise to create a
     ;; server buffer as it normally would.
@@ -3399,18 +3461,11 @@ otherwise returns nil."
                                                  :server server
                                                  :port port
                                                  :nick nick
+                                                 :password password
                                                  :full-name fullname))))
     (if (null serverbuffer)
         ;; Connection failed.
-        (progn
-          ;; Functions erc and erc-tls don't switch to the server buffer if it was
-          ;; newly-created, so I have to do it.
-          (switch-to-buffer (current-buffer))
-
-          (let ((msg (propertize (format "my-erc-connect: Connection to %s:%d failed!" server port)
-                                 'face 'my-alert-face)))
-            (save-excursion (insert msg))
-            (message msg)))
+        (message "my-erc-connect: Connection to %s:%d failed!" server port)
 
       ;; Successfully connected.  If we made a new frame, make it devoted to the server buffer.
       (if (and (not my-erc-frameless)

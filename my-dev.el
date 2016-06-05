@@ -37,7 +37,7 @@ current directory and its ancestors and, if one is found, prepends it to tags-ta
   ;; If xref uses TAGS files in this file, look for a TAGS file in this directory and all of its
   ;; ancestors, adding each one to tags-table-list.  This condition is needed to cope with major
   ;; modes (such as Emacs-Lisp) that do xref'ing without TAGS tables.
-  (when (eq xref-identifier-completion-table-function 'tags-lazy-completion-table)
+  (when (eq (xref-find-backend) 'etags)
 
     ;; Search for TAGS files.
     (let ((my-new-tags-table-list nil)
@@ -99,17 +99,18 @@ current directory and its ancestors and, if one is found, prepends it to tags-ta
 	    (while (visit-tags-table-buffer t)
 	      (tags-completion-table))))))
 
-  ;; Prompt for an identifier and update parameter ARGS.
-  (let ((my-identifier (if (memq major-mode '(dired-mode Buffer-menu-mode))
-			   ""
-			 (or (funcall xref-identifier-at-point-function) "")))
-
-	;; Don't ask the user if it's OK to update the tags table list.
-	(tags-add-tables nil))
+  ;; Prompt for an identifier and update parameter ARGS.  QUESTION: Is there a reason I don't
+  ;; just call xref--read-identifier here?
+  (let* ((my-backend (xref-find-backend))
+	 (my-identifier (if (memq major-mode '(dired-mode Buffer-menu-mode))
+			    ""
+			  (or (xref-backend-identifier-at-point my-backend) "")))
+	 ;; Don't ask the user if it's OK to update the tags table list.
+	 (tags-add-tables nil))
     (setq args (list (completing-read "Find definitions of: "
 				      ;; If tags-table-list has been changed, this re-builds the
 				      ;; completion table for this completing-read call.
-				      (funcall xref-identifier-completion-table-function)
+				      (xref-backend-identifier-completion-table my-backend)
 				      nil nil (cons my-identifier 0) 'xref--read-identifier-history
 				      my-identifier))))
 
@@ -268,7 +269,7 @@ current directory and its ancestors and, if one is found, prepends it to tags-ta
   (if (overlayp my-highlight-line-overlay)
       (delete-overlay my-highlight-line-overlay))
 
-  (if (null (search-forward-regexp "error - \\|\\([1-9][0-9]*\\|:\\|fatal\\|signtool\\) +error" nil t))
+  (if (null (search-forward-regexp "error:\\|error - \\|\\([1-9][0-9]*\\|:\\|fatal\\|signtool\\) +error" nil t))
       (error "No errors found!"))
   
   (my-highlight-line))
