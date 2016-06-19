@@ -9,6 +9,7 @@
 (require 'vc-hooks)
 (require 'savehist)
 (require 'xref)
+(require 'tramp)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Seed the random number generator.
@@ -82,8 +83,6 @@
 ;; my-ssh-environment-setup.  If SSH_AUTH_SOCK is misconfigured, TRAMP
 ;; can malfunction or hang.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(require 'tramp)
 
 ;; Speed up TRAMP by putting auto-save files in a local directory instead of
 ;; writing them back to the remote host.  TRAMP makes this directory if it

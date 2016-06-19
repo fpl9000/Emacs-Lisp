@@ -50,11 +50,11 @@ mode).  This is called from ~/.emacs."
 					  (setq my-server-already-running t))))
 	(server-start))
 
-      (run-at-time 1 nil `(lambda ()
-			    (if (display-graphic-p)
-				(my-frame-center))
-			    (if ,my-server-already-running
-				(my-message-highlight "WARNING: Emacs server is already running!")))))))
+      (run-at-time 1.25 nil `(lambda ()
+			       (if (display-graphic-p)
+				   (my-frame-center))
+			       (if ,my-server-already-running
+				   (my-message-highlight "WARNING: Emacs server is already running!")))))))
 
 (defmacro my-with-advice (func-advice-list &rest forms)
   "Evaluates FORMS with each function named in FUNC-ADVICE-LIST temporarilly advised with

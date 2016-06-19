@@ -6,6 +6,10 @@
 ;;
 ;; o Does killing a channel buffer with "C-x k RET" or from the Buffer Menu properly
 ;;   part the channel and close the devoted frame?
+;;
+;; o Why doesn't gnutls-cli connect to Freenode?
+;;
+;; o Change tls-program to omit gnutls-cli entries.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -118,8 +122,13 @@
   (if erc-session-password
       (erc-server-send (format "PASS %s" erc-session-password))
     (message "Logging in without password"))
-  (when (and (featurep 'erc-sasl) (erc-sasl-use-sasl-p))
+
+  ;; If SASL is being used to authenticate, tell the server.  The response handlers
+  ;; defined in erc-sasl.el handle it from here.
+  (when (and (featurep 'erc-sasl)
+             (erc-sasl-use-sasl-p))
     (erc-server-send "CAP REQ :sasl"))
+
   (erc-server-send (format "NICK %s" (erc-current-nick)))
   (erc-server-send
    (format "USER %s %s %s :%s"
@@ -128,6 +137,11 @@
 	   "0" "*"
 	   erc-session-user-full-name))
   (erc-update-mode-line))
+
+;; Patched version of erc-kill-channel to fix bug #23700 that I reported in this
+;; email to the Emacs bugs mailing list:
+;;
+;; http://thread.gmane.org/gmane.emacs.bugs/119119
 
 (defun erc-kill-channel ()
   "Sends a PART command to the server when the channel buffer is killed.
@@ -139,53 +153,52 @@ This function should be on `erc-kill-channel-hook'."
                                    (funcall erc-part-reason nil))
                            nil my-target)))))
 
-;; This works around bug #... that I reported in this email to the Emacs bugs mailing list:
-;;
-;;   ...
-;;
-;; My bug report also included a patch to change erc-kill-query-buffers to work like this.
-
-(defun erc-kill-query-buffers (process)
-  "Kill all buffers of PROCESS."
-  ;; here, we only want to match the channel buffers, to avoid
-  ;; "selecting killed buffers" b0rkage.
-  (if (processp process)
-      (erc-with-all-buffers-of-server process
-        (lambda ()
-          (not (erc-server-buffer-p)))
-        (kill-buffer (current-buffer)))))
+;; This works around bug #22099 that I reported and sent a patch for.
+;; Someone applied my patch on 2016-02-04.
+;; 
+;; (defun erc-kill-query-buffers (process)
+;;   "Kill all buffers of PROCESS."
+;;   ;; here, we only want to match the channel buffers, to avoid
+;;   ;; "selecting killed buffers" b0rkage.
+;;   (if (processp process)
+;;       (erc-with-all-buffers-of-server process
+;;         (lambda ()
+;;           (not (erc-server-buffer-p)))
+;;         (kill-buffer (current-buffer)))))
 
 ;; This works around bug #21187 that I reported in this email to the Emacs bugs mailing list:
 ;;
 ;;   http://thread.gmane.org/gmane.emacs.bugs/105304
 ;;
 ;; My bug report also included a patch to change erc-kill-buffer-function to work like this.
-
-(defun erc-kill-buffer-function ()
-  "Function to call when an ERC buffer is killed.
-This function should be on `kill-buffer-hook'.
-When the current buffer is in `erc-mode', this function will run
-one of the following hooks:
-`erc-kill-server-hook' if the server buffer was killed,
-`erc-kill-channel-hook' if a channel buffer was killed,
-or `erc-kill-buffer-hook' if any other buffer."
-  (when (eq major-mode 'erc-mode)
-    (erc-remove-channel-users)
-    (cond
-     ((eq (erc-server-buffer) (current-buffer))
-      (run-hooks 'erc-kill-server-hook))
-     ((erc-channel-p (or (erc-default-target) (buffer-name)))
-      (run-hooks 'erc-kill-channel-hook))
-     (t
-      (run-hooks 'erc-kill-buffer-hook)))))
+;; Lars Ingebrigtsen <larsi@gnus.org> applied this fix on 2015-12-27.
+;; 
+;; (defun erc-kill-buffer-function ()
+;;   "Function to call when an ERC buffer is killed.
+;; This function should be on `kill-buffer-hook'.
+;; When the current buffer is in `erc-mode', this function will run
+;; one of the following hooks:
+;; `erc-kill-server-hook' if the server buffer was killed,
+;; `erc-kill-channel-hook' if a channel buffer was killed,
+;; or `erc-kill-buffer-hook' if any other buffer."
+;;   (when (eq major-mode 'erc-mode)
+;;     (erc-remove-channel-users)
+;;     (cond
+;;      ((eq (erc-server-buffer) (current-buffer))
+;;       (run-hooks 'erc-kill-server-hook))
+;;      ((erc-channel-p (or (erc-default-target) (buffer-name)))
+;;       (run-hooks 'erc-kill-channel-hook))
+;;      (t
+;;       (run-hooks 'erc-kill-buffer-hook)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; User-configurable Variables.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (makunbound 'my-erc-default-networkid)
-(defvar my-erc-default-networkid "Freenode Any"
-  "...")
+(defvar my-erc-default-networkid "Freenode SSL Any"
+  "The default network ID that function my-erc-networkid-connect ('\\[my-erc-networkid-connect]')
+should connect to.")
 
 (makunbound 'my-erc-networks)
 (defvar my-erc-networks
@@ -208,9 +221,10 @@ or `erc-kill-buffer-hook' if any other buffer."
     ("OFTC"
      ;; SSL connections should be made to port 6697.
      ("localhost"       "localhost" 6669 nil nil)
-     ("SSL Main"        "ssl:irc4.oftc.net" 6697 nil nil)
+     ("SSL Main"        "ssl:irc.oftc.net" 6697 nil nil)
      ("Main"            "irc.oftc.net" 6667 nil nil)
-     ("IPv4"            "irc4.oftc.net" 6667 nil nil))
+     ("IPv4"            "irc4.oftc.net" 6667 nil nil)
+     ("SSL IPv4"        "irc4.oftc.net" 6667 nil nil))
 
     ("IRCnet"
      ("UTwente NL"      "irc.snt.utwente.nl" 6667 nil nil)
