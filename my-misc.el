@@ -30,7 +30,7 @@ mode).  This is called from ~/.emacs."
 	  (run-at-time interval interval 'my-check-for-newer-elisp-files)))
 
   ;; The below code only executes the very first time Emacs starts.
-  (when (not (boundp 'my-reload-my-elisp-files-running))
+  (when (not my-reload-my-elisp-files-running)
     (if (file-directory-p "~")
 	(dired "~"))
 
@@ -50,7 +50,7 @@ mode).  This is called from ~/.emacs."
 					  (setq my-server-already-running t))))
 	(server-start))
 
-      (run-at-time 1.25 nil `(lambda ()
+      (run-at-time 1.5 nil `(lambda ()
 			       (if (display-graphic-p)
 				   (my-frame-center))
 			       (if ,my-server-already-running
@@ -334,6 +334,9 @@ when used around the body of a dolist or while form, for example:
 			   (concat (substring my-word 0 my-max-display-length) " ...")
 			 my-word)))
       (message "'%s' pushed on kill ring!" my-msg-word))))
+
+(defvar my-reload-my-elisp-files-running nil
+  "Non-nil if function my-reload-my-elisp-files is currently reloading my Elisp files.")
 
 (defun my-reload-my-elisp-files ()
   "Reloads all of my personal elisp files by loading ~/.emacs again."
@@ -2060,6 +2063,10 @@ shell-command-on-region (i.e., in buffer *Shell Command Output*)."
 	(pop-to-buffer "*Compile-Log*")
       (widen))))
 
+(defvar my-load-current-elisp-file-running nil
+  "Non-nil if function my-load-current-elisp-file is currently loading the current .el
+file.")
+
 (defun my-load-current-elisp-file ()
   "Loads the .elc file that corresponds to the current .el file.  If there's no .elc file,
 simply performs eval-current-buffer."
@@ -2067,7 +2074,7 @@ simply performs eval-current-buffer."
   (if (buffer-modified-p)
       (error "Please save this buffer first!"))
 
-  (let* ((el-filename (buffer-file-name))
+  (let ((el-filename (buffer-file-name))
 	 (my-load-current-elisp-file-running t)
 	 elc-filename)
 

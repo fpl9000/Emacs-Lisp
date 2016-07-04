@@ -260,8 +260,8 @@ Emacs with -batch when byte-compiling all of my Elisp files."
 
   ;; Turn off Font-Lock mode globally, except when I interactively byte-compile a file or reload my
   ;; Emacs configuration.
-  (if (and (not (boundp 'my-load-current-elisp-file-running))
-	   (not (boundp 'my-reload-my-elisp-files-running)))
+  (if (and (not my-load-current-elisp-file-running)
+	   (not my-reload-my-elisp-files-running))
       (global-font-lock-mode 0))
 
   ;; Put the hostname in the frame titles.
@@ -360,12 +360,12 @@ Emacs with -batch when byte-compiling all of my Elisp files."
     (set-face-underline 'compilation-info nil))
 
   (require 'diff-mode)
-  (set-face-background 'diff-file-header-face "darkblue")
-  (set-face-foreground 'diff-file-header-face "yellow")
-  (set-face-bold 'diff-file-header-face nil)
-  (set-face-background 'diff-header-face "darkblue")
-  (set-face-background 'diff-refine-change "#666")
-  (set-face-foreground 'diff-refine-change "yellow")
+  (set-face-background 'diff-file-header "darkblue")
+  (set-face-foreground 'diff-file-header "yellow")
+  (set-face-bold 'diff-file-header nil)
+  (set-face-background 'diff-header "darkblue")
+  (set-face-background 'diff-refine-changed "#666")
+  (set-face-foreground 'diff-refine-changed "yellow")
 
   ;; Font-Lock Mode faces.
   (set-face-foreground 'font-lock-builtin-face "lightblue")
@@ -431,8 +431,8 @@ Emacs with -batch when byte-compiling all of my Elisp files."
   (set-face-foreground 'region "yellow")	;; Was magenta
   (set-face-background 'region (face-background 'default))
 
-  (set-face-background 'show-paren-match-face (face-background 'default))  ;; nil doesn't work!
-  (set-face-foreground 'show-paren-match-face "#0ff")
+  (set-face-background 'show-paren-match (face-background 'default))  ;; nil doesn't work!
+  (set-face-foreground 'show-paren-match "#0ff")
 
   (set-face-background 'smerge-refined-change "#888")
 
@@ -471,7 +471,8 @@ Emacs with -batch when byte-compiling all of my Elisp files."
 
   (my-set-default-frame-alist)
   
-  (ignore-errors (kill-buffer "*Shell Command Output*")))
+  (if (not my-reload-my-elisp-files-running)
+      (ignore-errors (kill-buffer "*Shell Command Output*"))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Configure the mode line.
@@ -513,14 +514,12 @@ Emacs with -batch when byte-compiling all of my Elisp files."
 		(my-mode-line-notice (:eval my-mode-line-notice) "")
 		"%-"))
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; My variables that control appearance.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defvar-local my-highlight-line-overlay nil
    "...")
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; My functions that control appearance.

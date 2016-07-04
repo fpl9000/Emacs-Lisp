@@ -488,6 +488,8 @@ the symbol major-mode against 'c-mode or 'c++-mode."
   "Added to emacs-lisp-mode-hook."
   (my-font-lock-add-keywords-programming)
 
+  (setq fill-column 90)
+
   (local-set-key (kbd "C-z ;") (lambda () (interactive (insert (make-string 80 ?;)))))
   (local-set-key (kbd "C-z u") 'my-insert-under-construction-lisp)
   (local-set-key (kbd "TAB") 'tab-to-tab-stop)
@@ -539,7 +541,7 @@ the symbol major-mode against 'c-mode or 'c++-mode."
 
 (defun my-find-file-hook ()
   "Added to find-file-hook.  Called after a buffer is loaded from a file."
-  (if (member-ignore-case (buffer-name) '(".mtg" "journal.txt.asc" "passwords.txt.asc" "pw.txt"))
+  (if (member-ignore-case (buffer-name) '("journal.txt.asc" "passwords.txt.asc" "pw.txt"))
       (set (make-local-variable 'backup-inhibited) t))
 
   ;; Filename-based operations.

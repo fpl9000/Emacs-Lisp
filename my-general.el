@@ -46,7 +46,8 @@
   (if (member this-command '(find-file find-alternate-file write-file dired dired-create-directory
 			     dired-do-rename dired-do-copy my-dired my-dired-do-rename-with-suggestion
 			     my-dired-do-copy-with-suggestion man find-tag))
-      ;; Make icomplete-simple-completing-p return nil to disable icomplete-mode for this command.
+      ;; Make icomplete-simple-completing-p return nil to disable icomplete-mode for this
+      ;; command.
       nil
     retval))
 
@@ -77,6 +78,16 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (my-ssh-environment-setup)	;; This function is defined in my-misc.el.
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Work around bug #23759 that I filed (http://thread.gmane.org/gmane.emacs.bugs/119471).
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Remove the '--x509cafile %t' from the gnutls-cli commands in variable tls-program,
+;; because on Windows, the %t expands to 'nil', which causes gnutls-cli to fail.
+(setq tls-program '("gnutls-cli -p %p %h"
+		    "gnutls-cli -p %p %h --protocols ssl3"
+		    "openssl s_client -connect %h:%p -no_ssl2 -ign_eof"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Configure TRAMP.  IMPORTANT: This must come after the above call to
@@ -261,8 +272,6 @@
 					 try-complete-lisp-symbol
 					 try-expand-dabbrev-all-buffers
 					 try-expand-dabbrev-from-kill)
-
-      ;; As of Emacs 21, the Elisp reference manual is part of the Emacs CVS repository.
       Info-default-directory-list	`("~/einfo/"
 					  ,@(if my-win32
 						(list (concat my-systemdrive "/apps/emacs/share/info/")
@@ -297,7 +306,10 @@
       ;; Here, "-ic" causes bash spawned from Emacs to eat CPU under FreeBSD.
       shell-command-switch		"-c"
       shell-file-name			"bash"
-      shell-prompt-pattern		"^.*[:>] "  ;; Used only by TRAMP because comint-use-prompt-regexp is nil.
+
+      ;; Used only by TRAMP because comint-use-prompt-regexp is nil.
+      shell-prompt-pattern		"^.*[:>] "
+
       split-width-threshold		nil
       temporary-file-directory		(if my-win32
 					    (concat my-systemdrive "/temp")
@@ -313,3 +325,7 @@
 (setq-default fill-column 100
 	      buffer-file-coding-system	'undecided-unix
 	      cursor-in-non-selected-windows nil)
+
+;; Local variables:
+;; fill-column: 90
+;; End:
