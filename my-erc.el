@@ -6,10 +6,6 @@
 ;;
 ;; o Does killing a channel buffer with "C-x k RET" or from the Buffer Menu properly
 ;;   part the channel and close the devoted frame?
-;;
-;; o Why doesn't gnutls-cli connect to Freenode?
-;;
-;; o Change tls-program to omit gnutls-cli entries.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -3532,8 +3528,3 @@ variable my-erc-networks."
     (add-to-list 'serverinfo network 'append)
 
     (apply 'my-erc-connect serverinfo)))
-
-;; Local variables:
-;; indent-tabs-mode: nil
-;; fill-column: 85
-;; End:
