@@ -134,58 +134,20 @@
 	   erc-session-user-full-name))
   (erc-update-mode-line))
 
-;; Patched version of erc-kill-channel to fix bug #23700 that I reported in this
-;; email to the Emacs bugs mailing list:
-;;
-;; http://thread.gmane.org/gmane.emacs.bugs/119119
-
-(defun erc-kill-channel ()
-  "Sends a PART command to the server when the channel buffer is killed.
-This function should be on `erc-kill-channel-hook'."
-  (when (erc-server-process-alive)
-    (let ((my-target (erc-default-target)))
-      (if my-target
-          (erc-server-send (format "PART %s :%s" my-target
-                                   (funcall erc-part-reason nil))
-                           nil my-target)))))
-
-;; This works around bug #22099 that I reported and sent a patch for.
-;; Someone applied my patch on 2016-02-04.
+;; ;; Patched version of erc-kill-channel to fix bug #23700 that I reported in this
+;; ;; email to the Emacs bugs mailing list:
+;; ;;
+;; ;; http://thread.gmane.org/gmane.emacs.bugs/119119
 ;; 
-;; (defun erc-kill-query-buffers (process)
-;;   "Kill all buffers of PROCESS."
-;;   ;; here, we only want to match the channel buffers, to avoid
-;;   ;; "selecting killed buffers" b0rkage.
-;;   (if (processp process)
-;;       (erc-with-all-buffers-of-server process
-;;         (lambda ()
-;;           (not (erc-server-buffer-p)))
-;;         (kill-buffer (current-buffer)))))
-
-;; This works around bug #21187 that I reported in this email to the Emacs bugs mailing list:
-;;
-;;   http://thread.gmane.org/gmane.emacs.bugs/105304
-;;
-;; My bug report also included a patch to change erc-kill-buffer-function to work like this.
-;; Lars Ingebrigtsen <larsi@gnus.org> applied this fix on 2015-12-27.
-;; 
-;; (defun erc-kill-buffer-function ()
-;;   "Function to call when an ERC buffer is killed.
-;; This function should be on `kill-buffer-hook'.
-;; When the current buffer is in `erc-mode', this function will run
-;; one of the following hooks:
-;; `erc-kill-server-hook' if the server buffer was killed,
-;; `erc-kill-channel-hook' if a channel buffer was killed,
-;; or `erc-kill-buffer-hook' if any other buffer."
-;;   (when (eq major-mode 'erc-mode)
-;;     (erc-remove-channel-users)
-;;     (cond
-;;      ((eq (erc-server-buffer) (current-buffer))
-;;       (run-hooks 'erc-kill-server-hook))
-;;      ((erc-channel-p (or (erc-default-target) (buffer-name)))
-;;       (run-hooks 'erc-kill-channel-hook))
-;;      (t
-;;       (run-hooks 'erc-kill-buffer-hook)))))
+;; (defun erc-kill-channel ()
+;;   "Sends a PART command to the server when the channel buffer is killed.
+;; This function should be on `erc-kill-channel-hook'."
+;;   (when (erc-server-process-alive)
+;;     (let ((my-target (erc-default-target)))
+;;       (if my-target
+;;           (erc-server-send (format "PART %s :%s" my-target
+;;                                    (funcall erc-part-reason nil))
+;;                            nil my-target)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; User-configurable Variables.
@@ -903,9 +865,9 @@ probably query buffers too)."
   (modify-syntax-entry ?' "." erc-mode-syntax-table)
 
   (local-set-key (kbd "TAB")            'my-erc-tab)
-  ;;(local-set-key (kbd "<backspace>")    'my-erc-delete-backward-char) ;; Use advice instead?
-  (local-set-key (kbd "<M-backspace>")  'my-erc-backward-kill-word) ;; Use advice instead?
-  (local-set-key (kbd "<down-mouse-3>") 'my-erc-channel-menu)
+  (local-set-key (kbd "<backspace>")    'my-erc-delete-backward-char)
+  (local-set-key (kbd "<M-backspace>")  'my-erc-backward-kill-word)
+  ;;(local-set-key (kbd "<down-mouse-3>") 'my-erc-channel-menu)
   (local-set-key (kbd "<f1>")           'my-erc-clear-screen)
   (local-set-key (kbd "<S-f1>")         'my-erc-clear-all-screens)
   (local-set-key (kbd "<C-f1>")         'my-erc-delete-unwanted-text)
