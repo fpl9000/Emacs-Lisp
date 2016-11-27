@@ -161,20 +161,24 @@ should connect to.")
 (makunbound 'my-erc-networks)
 (defvar my-erc-networks
   '(("freenode"
-     ;; Freenode servers listen on ports 6665-6667, 7000, 7070, and 8000-8002
-     ;; SSL connections should be made to port 6697.
-     ("localhost"       "localhost" 6667 nil nil)
+     ;; Freenode servers listen on ports 6665-6667, and 8000-8002.
+     ;; SSL connections should be made to ports 6697, 7000, and 7070.
+     ("localhost"       "localhost" 8002 nil nil)
      ("Any"             "chat.freenode.net" 8002 nil nil)
-     ("SSL Any"         "ssl:chat.freenode.net" 6697 nil nil)
-     ("US"              "chat.us.freenode.net" 6667 nil nil)
-     ("Dallas TX"       "asimov.freenode.net" 6667 nil nil)
-     ("Washington DC"   "card.freenode.net" 6667 nil nil)
-     ("Ashburn VA"      "dickson.freenode.net" 6667 nil nil)
-     ("Chicago IL"      "morgan.freenode.net" 6667 nil nil)
-     ("SSL Chicago IL"  "ssl:morgan.freenode.net" 6697 nil nil)
-     ("SSL Sweden"      "ssl:leguin.freenode.net" 6697 nil nil)
-     ("San Jose CA"     "weber.freenode.net" 6667 nil nil)
-     ("Ask ..."         "?" 6667 nil nil))
+     ("SSL Chat"        "ssl:chat.freenode.net" 6697 nil nil)
+     ("SSL IRC"         "ssl:irc.freenode.net" 6697 nil nil)
+     ("SSL Adams"       "ssl:adams.freenode.net" 6697 nil nil)
+     ("SSL Morgan"      "ssl:morgan.freenode.net" 6697 nil nil)
+     ("SSL Leguin"      "ssl:leguin.freenode.net" 6697 nil nil)
+     ("Chat"            "chat.us.freenode.net" 8002 nil nil)
+     ("IRC"             "irc.us.freenode.net" 8002 nil nil)
+     ("Adams"           "adams.freenode.net" 8002 nil nil)
+     ("Asimov"          "asimov.freenode.net" 8002 nil nil)
+     ("Card"            "card.freenode.net" 8002 nil nil)
+     ("Dickson"         "dickson.freenode.net" 8002 nil nil)
+     ("Morgan"          "morgan.freenode.net" 8002 nil nil)
+     ("Weber"           "weber.freenode.net" 8002 nil nil)
+     ("Ask ..."         "?" 8002 nil nil))
 
     ("OFTC"
      ;; SSL connections should be made to port 6697.
@@ -710,12 +714,6 @@ that channel, which I don't like, so I catch the offending condition here."
 displayed.  This is reset to be equal to my-erc-hide-names-on-join once the end of the
 names list is received."
   (setq my-erc-hide-names nil))
-
-(define-advice erc-cmd-NICK (:after (&rest args) my-ad-after-erc-cmd-NICK)
-  "Sets the forceground face of erc-prompt-face according to the spelling of my nick."
-  (if (string-match-p "_afk_?$" (or (car-safe args) ""))
-      (set-face-foreground 'erc-prompt-face my-erc-away-prompt-color)
-    (set-face-foreground 'erc-prompt-face my-erc-prompt-color)))
 
 (define-advice erc-cmd-QUERY (:around (origfun &rest args) my-ad-around-erc-cmd-QUERY)
   "Displays query buffer in new frame."
@@ -1992,13 +1990,7 @@ string to be passed to erc-cmd-CLOSE (and ultimately to erc-cmd-QUIT)."
             ;; This server buffer is not connected (or we don't care that it is
             ;; due to the /f option), so kill the server buffer first and then
             ;; all associated channel and query buffers.
-            (my-erc-kill-buffers-for-server 'all)))
-        
-        ;; TODO: Remove this eventually.
-        ;; This seems to prevent the problem where one channel buffer is left in
-        ;; existence after all other ERC buffers are killed.
-        ;;(sleep-for 2)
-        )))
+            (my-erc-kill-buffers-for-server 'all))))))
   t)
 
 (put 'erc-cmd-EXIT 'do-not-parse-args t)
@@ -2278,13 +2270,13 @@ current buffer.  If WHICH is nil, it defaults to 'all."
     ;; invoked with server-buffer as the current buffer.
     (with-current-buffer server-buffer
 
-      (if (memq which '(all server))
-          ;; Prevent Emacs from asking if it's OK to exit because of this server
-          ;; connection.  QUESTION: Is this really needed?  We're about to kill the
-          ;; server buffer, which terminates the connection if it still exists.
-          (set-process-query-on-exit-flag (with-current-buffer server-buffer
-                                            erc-server-process)
-                                          nil))
+;;      (if (memq which '(all server))
+;;          ;; Prevent Emacs from asking if it's OK to exit because of this server
+;;          ;; connection.  QUESTION: Is this really needed?  We're about to kill the
+;;          ;; server buffer, which terminates the connection if it still exists.
+;;          (set-process-query-on-exit-flag (with-current-buffer server-buffer
+;;                                            erc-server-process)
+;;                                          nil))
 
       ;; We have to compute the list of channel and query buffers before we kill
       ;; the server buffer, because erc-server-process is nil after the server
@@ -3134,7 +3126,7 @@ argument means to pause a short time before joining."
     (my-frame-redisplay-hack)
     (my-frame-center))
   
-  (set-mouse-pixel-position (selected-frame) 3 3))
+  (set-mouse-pixel-position (selected-frame) (- (frame-pixel-width) 2) 0))
 
 (defun my-erc-make-server-frame-visible (&optional frame)
   "Makes the server frame for the current ERC buffer (or FRAME if given) visible.  Also

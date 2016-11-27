@@ -78,7 +78,7 @@ package requires the use of GPG, because it formats the command line using optio
 syntax that only GPG accepts.")
 
 (defvar my-crypt-program-hashes (if my-win32
-				  '("a46b015ce8e1e6c02288d955a94dbd0b11333eed")
+				  '("2f49d4abd57c529a3f5917f10e73b85b4115fbdc")
 				  (if (file-executable-p "/usr/local/bin/gpg")
 				      '("...")
 				    (if (file-executable-p "/usr/bin/gpg")

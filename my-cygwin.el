@@ -244,12 +244,12 @@ Pathanames starting with '~/' are left with that prefix, because Emacs groks it.
 
 (defun my-fixperm (&rest files)
   "Runs fixperm on FILES.  Does not wait for the fixperm process to finish."
-  (let ((fixperm (concat my-systemdrive "/franl/bin/win32/fixperm"))
+  (let ((fixperm (concat my-systemdrive "/franl/bin/win32/fp"))
 	(bash (concat my-systemdrive "/apps/cygwin/bin/bash.exe")))
     (if (or (not (file-exists-p fixperm))
 	    (not (file-exists-p bash)))
 	(progn
-	  (message "my-fixperm: Either Bash or fixperm does not exist!")
+	  (message "my-fixperm: Either bash.exe or ~/bin/win32/fp does not exist!")
 	  (sleep-for 1))
 
       (my-eval-silently

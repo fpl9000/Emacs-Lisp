@@ -40,10 +40,6 @@ mode).  This is called from ~/.emacs."
       (if (file-exists-p "~/todo.txt")
 	  (find-file "~/todo.txt")))
 
-    ;; This must be done after the above find-file/dired calls to make the warning buffer
-    ;; visible in some window.
-    (my-check-for-out-of-date-elc-files)
-
     ;; Try to start the server.  Warn if it's already running.
     (let ((my-server-already-running nil))
       (my-with-advice ((display-warning (lambda (&rest args)
@@ -54,7 +50,12 @@ mode).  This is called from ~/.emacs."
 			       (if (display-graphic-p)
 				   (my-frame-center))
 			       (if ,my-server-already-running
-				   (my-message-highlight "WARNING: Emacs server is already running!")))))))
+				   (my-message-highlight "WARNING: Emacs server is already running!"))))))
+
+  ;; This must be done after the above find-file/dired calls to make the warning buffer
+  ;; visible in some window.  Do this even when my-reload-my-elisp-files-running is
+  ;; non-nil.
+  (my-check-for-out-of-date-elc-files))
 
 (defmacro my-with-advice (func-advice-list &rest forms)
   "Evaluates FORMS with each function named in FUNC-ADVICE-LIST temporarilly advised with
@@ -1850,7 +1851,8 @@ does additional special processing."
 	(end-of-line))
 
     ;; All other cases ...
-    (newline)
+    ;;(newline)
+    (insert "\n")
     (indent-for-tab-command)))
 
 ;;(defun my-perl-mode-newline ()

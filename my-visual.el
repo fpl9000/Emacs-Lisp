@@ -264,11 +264,13 @@ Emacs with -batch when byte-compiling all of my Elisp files."
 	   (not my-reload-my-elisp-files-running))
       (global-font-lock-mode 0))
 
-  ;; Put the hostname in the frame titles.
-  (let ((short-hostname (if (string-match "^[^.]+" (system-name))
-			    (match-string 0 (system-name))
-			  "UNKNOWN HOST")))
-    (setq frame-title-format (concat "emacs - " short-hostname " - %b")))
+  ;; Put the buffer name in the frame titles.  Also include the hostname, except on Windows.
+  (if my-win32
+      (setq frame-title-format (concat "emacs - %b"))
+    (let ((short-hostname (if (string-match "^[^.]+" (system-name))
+			      (match-string 0 (system-name))
+			    "UNKNOWN HOST")))
+      (setq frame-title-format (concat "emacs - " short-hostname " - %b"))))
 
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; Simplify the GUI.

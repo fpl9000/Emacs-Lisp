@@ -545,44 +545,36 @@ the symbol major-mode against 'c-mode or 'c++-mode."
       (set (make-local-variable 'backup-inhibited) t))
 
   ;; Filename-based operations.
-  (if (string-match-p "\\.pop$" (buffer-file-name))
-      ;; Special handling of .pop (PopSel) files.
-      ;; Earlier entries in font-lock-keywords prevent later entries from being
-      ;; applied to the same text, unless the later entry has OVERRIDE set to t.
-      (font-lock-add-keywords nil '(("^\\([^=]+\\)=.*$" 1 'font-lock-function-name-face nil)
-				    ("^[^=]+=\\(.*\\)$" 1 'font-lock-comment-face t))
-			      nil)
+  (when (string-match-p "\\.ahk$" (buffer-file-name))
+    ;; Special handling of .ahk (AutoHotkey) files.
+    (use-local-map my-ahk-local-map)
+    (local-set-key (kbd "M-q") 'my-ahk-fill-paragraph-function)
 
-    (when (string-match-p "\\.ahk$" (buffer-file-name))
-      ;; Special handling of .ahk (AutoHotkey) files.
-      (use-local-map my-ahk-local-map)
-      (local-set-key (kbd "M-q") 'my-ahk-fill-paragraph-function)
-
-      ;; Earlier entries in font-lock-keywords prevent later entries from being
-      ;; applied to the same text, unless the later entry has OVERRIDE set to t.
-      (font-lock-add-keywords nil '(("\\([a-zA-Z_0-9]+\\)(" 1 'font-lock-function-name-face nil)
-				    ("{[a-zA-Z0-9_]+}" 0 'font-lock-keyword-face nil)
-				    ("\\b\\(true\\|false\\|ErrorLevel\\)\\b" 0 'font-lock-keyword-face nil)
-				    ("ahk_[a-z]+" 0 'font-lock-keyword-face nil)
-				    ("\\b\\([0-9]+\\)\\b" 1 'font-lock-constant-face nil)
-				    ("\\b\\(0x[0-9A-Fa-f]+\\)\\b" 1 'font-lock-constant-face nil)
-				    ("\\b\\(A_[A-Za-z0-9_]*\\)\\b" 1 'font-lock-variable-name-face nil)
-				    ("\\b\\([A-Z_][A-Z_0-9_]*\\)\\b" 1 'font-lock-variable-name-face nil)
-				    ("\\b\\(Else\\|If\\|ByRef\\)\\b" 0 'font-lock-keyword-face nil)
-				    ("^\\s-*\\([A-Z][a-zA-Z]+\\)\\( \\|$\\)" 1 'font-lock-keyword-face nil)
-				    ("::\\([A-Z][a-zA-Z_]+\\)" 1 'font-lock-keyword-face nil)
-				    ("^\\(.*\\)::" 1 'font-lock-function-name-face t)
-				    (":=\\|=" 0 'font-lock-keyword-face nil)
-				    (" \\([.%]\\) " 1 'font-lock-keyword-face nil)
-				    ("^[()]" 0 'font-lock-keyword-face nil)
-				    ("#\\S-+" 0 'font-lock-keyword-face nil)
-				    ("^\\S-+:" 0 'font-lock-function-name-face t)
-				    ("%[^%\"]+%" 0 'font-lock-variable-name-face t)
-				    ("[{}]" 0 'font-lock-keyword-face t)
-				    ("::" 0 'font-lock-keyword-face t)
-				    (";.*$" 0 'font-lock-comment-face t)
-				    )
-			      nil)))
+    ;; Earlier entries in font-lock-keywords prevent later entries from being
+    ;; applied to the same text, unless the later entry has OVERRIDE set to t.
+    (font-lock-add-keywords nil '(("\\([a-zA-Z_0-9]+\\)(" 1 'font-lock-function-name-face nil)
+				  ("{[a-zA-Z0-9_]+}" 0 'font-lock-keyword-face nil)
+				  ("\\b\\(true\\|false\\|ErrorLevel\\)\\b" 0 'font-lock-keyword-face nil)
+				  ("ahk_[a-z]+" 0 'font-lock-keyword-face nil)
+				  ("\\b\\([0-9]+\\)\\b" 1 'font-lock-constant-face nil)
+				  ("\\b\\(0x[0-9A-Fa-f]+\\)\\b" 1 'font-lock-constant-face nil)
+				  ("\\b\\(A_[A-Za-z0-9_]*\\)\\b" 1 'font-lock-variable-name-face nil)
+				  ("\\b\\([A-Z_][A-Z_0-9_]*\\)\\b" 1 'font-lock-variable-name-face nil)
+				  ("\\b\\(Else\\|If\\|ByRef\\)\\b" 0 'font-lock-keyword-face nil)
+				  ("^\\s-*\\([A-Z][a-zA-Z]+\\)\\( \\|$\\)" 1 'font-lock-keyword-face nil)
+				  ("::\\([A-Z][a-zA-Z_]+\\)" 1 'font-lock-keyword-face nil)
+				  ("^\\(.*\\)::" 1 'font-lock-function-name-face t)
+				  (":=\\|=" 0 'font-lock-keyword-face nil)
+				  (" \\([.%]\\) " 1 'font-lock-keyword-face nil)
+				  ("^[()]" 0 'font-lock-keyword-face nil)
+				  ("#\\S-+" 0 'font-lock-keyword-face nil)
+				  ("^\\S-+:" 0 'font-lock-function-name-face t)
+				  ("%[^%\"]+%" 0 'font-lock-variable-name-face t)
+				  ("[{}]" 0 'font-lock-keyword-face t)
+				  ("::" 0 'font-lock-keyword-face t)
+				  (";.*$" 0 'font-lock-comment-face t)
+				  )
+			    nil))
 
   ;; Turn on Font Lock mode (with some exceptions).
   (my-font-lock-post-command-hook))

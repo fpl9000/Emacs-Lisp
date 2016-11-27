@@ -274,6 +274,17 @@ current directory and its ancestors and, if one is found, prepends it to tags-ta
   
   (my-highlight-line))
 
+(defun my-find-warning (&optional prefix)
+  "Finds the next build warning in the current buffer."
+  (interactive "P")
+  (if (overlayp my-highlight-line-overlay)
+      (delete-overlay my-highlight-line-overlay))
+
+  (if (null (search-forward-regexp "\\(:\\|command line\\) warning\\b\\|warning:" nil t))
+      (error "No warnings found!"))
+
+  (my-highlight-line))
+
 (defun my-compile-and-run (&optional filename)
   "Compiles and runs FILENAME or the current file if FILENAME is nil."
   (interactive)

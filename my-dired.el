@@ -232,6 +232,7 @@ dired-mode-map.  This hook also runs when vc-dired-mode starts."
   (local-set-key (kbd "f") 'my-dired-find-alternate-file)
   (local-set-key (kbd "h") 'my-dired-sha1sum)
   ;;(local-set-key (kbd "H") 'my-dired-hyphenate-filename)
+  (local-set-key (kbd "I") 'dired-kill-subdir)
   (local-set-key (kbd "L") 'my-dired-launch-file)
   (if my-win32
       (local-set-key (kbd "M") 'my-dired-chmod))

@@ -206,7 +206,10 @@
 (add-to-list 'safe-local-eval-forms	'(my-n-column-tabs 8))
 (add-to-list 'safe-local-eval-forms	'(auto-fill-mode 0))
 (add-to-list 'safe-local-eval-forms	'(my-toggle-truncate-lines))
-(add-to-list 'safe-local-variable-values '((indent-tabs-mode . nil)))
+(add-to-list 'safe-local-variable-values '((indent-tabs-mode . nil)
+					   (fill-column . 85)
+					   (fill-column . 110)
+					   (fill-prefix . "rem ")))
 
 (setq ange-ftp-binary-file-name-regexp	"."
       ange-ftp-default-user		"ftp"
@@ -233,7 +236,7 @@
 						  ("\\.asc\\'" . text-mode)
 						  ("\\.rb\\'" . ruby-mode)
 						  ("\\.mof\\'" . my-mof-mode)
-						  ("\\.\\(ism\\|xml\\)\\'" . fundamental-mode))
+						  ("\\.\\(ism\\|xml\\|csproj\\|vcxproj\\)\\'" . fundamental-mode))
 						auto-mode-alist)
       auto-save-interval		600
       backup-by-copying			(if my-win32 t nil)
