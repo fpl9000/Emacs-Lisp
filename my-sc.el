@@ -319,7 +319,7 @@ source files without checking them out."
 
 (setq ss-project-dirs		'(((concat "^" my-systemdrive "/franl/work/arcstream/src") . "$/Thomson/"))
       ss-program		(concat my-systemdrive "/program files/microsoft visual studio/vss/win32/ss.exe")
-      ss-tmp-dir		(concat my-systemdrive "/temp")
+      ss-tmp-dir		temporary-file-directory
       ;; ss-update-new-frame	'((name . "Source Safe Check-in Comment"))
       ss-diff-program		'(DIFF "-u -w"))
 

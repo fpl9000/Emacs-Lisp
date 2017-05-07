@@ -269,7 +269,7 @@ current directory and its ancestors and, if one is found, prepends it to tags-ta
   (if (overlayp my-highlight-line-overlay)
       (delete-overlay my-highlight-line-overlay))
 
-  (if (null (search-forward-regexp "error:\\|error - \\|\\([1-9][0-9]*\\|:\\|fatal\\|signtool\\) +error" nil t))
+  (if (null (search-forward-regexp "error:\\|error - \\|\\([1-9][0-9]*\\|:\\|fatal\\|signtool\\) +error(s)\\|errors + = [1-9]" nil t))
       (error "No errors found!"))
   
   (my-highlight-line))

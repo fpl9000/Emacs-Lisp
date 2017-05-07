@@ -388,7 +388,8 @@ my-erc-cleanup-channels.")
 (defvar my-erc-frameless nil
   "If non-nil, never creates a new frame.")
 
-(defvar my-erc-no-popups (not (null (member (system-name) '("izsystem023"))))
+(defvar my-erc-no-popups (not (null (member-ignore-case (system-name)
+							'("izsystem069" "izsystem023"))))
   "If non-nil, no dialog boxes will popup to announce significant events.")
 
 (defvar my-erc-networks-alist nil

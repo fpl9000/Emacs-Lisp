@@ -34,8 +34,8 @@ mode).  This is called from ~/.emacs."
     (if (file-directory-p "~")
 	(dired "~"))
 
-    (if (and (file-exists-p "~/todo-work.txt")
-	     (string= (downcase (system-name)) "izsystem023"))
+    (if (and (member-ignore-case (system-name) '("izsystem023" "izsystem059" "opie" "legion" "erock" "norton" "kenny" "wally"))
+	     (file-exists-p "~/todo-work.txt"))
 	(find-file "~/todo-work.txt")
       (if (file-exists-p "~/todo.txt")
 	  (find-file "~/todo.txt")))

@@ -60,15 +60,18 @@ of the parameters in it."
 
 (defun my-frame-initial-width ()
   "Returns the desired width of the initial frame in characters."
-  (if (> (my-frame-monitor-width) 1920)
-      150
-    (if (> (my-frame-monitor-width) 1366)
-	135
-      (if (> (my-frame-monitor-width) 1280)
-	  110
-	(if (> (my-frame-monitor-width) 1024)
-	    100
-	  95)))))
+  (let ((my-monitor-width (my-frame-monitor-width)))
+    (if (> my-monitor-width 1920)
+	150
+      (if (> my-monitor-width 1600)
+	  135
+	(if (> my-monitor-width 1366)
+	    125
+	  (if (> my-monitor-width 1280)
+	      110
+	    (if (> my-monitor-width 1024)
+		100
+	      95)))))))
 
 (defun my-frame-redisplay-hack (&optional frame try-hard)
   "Hack to redisplay the specified FRAME given Emacs' optimized rendering on

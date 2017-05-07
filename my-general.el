@@ -314,9 +314,9 @@
       shell-prompt-pattern		"^.*[:>] "
 
       split-width-threshold		nil
-      temporary-file-directory		(if my-win32
-					    (concat my-systemdrive "/temp")
-					  "/tmp")
+;;      temporary-file-directory		(if my-win32
+;;					    (concat my-systemdrive "/temp")
+;;					  "/tmp")
       text-quoting-style		'straight   ;; Don't change 's into Unicode quotes (U+2018, U+2019).
       time-stamp-format			"%:y-%02m-%02d %02H:%02M:%02S %s"
       user-full-name			"Francis Litterio"

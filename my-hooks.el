@@ -54,8 +54,9 @@ zero bytes long."
     (if (and buf (= 0 (buffer-size buf)))
         (kill-buffer buf))))
 
-(run-with-idle-timer 2 'repeat #'my-tramp-cleanup)
-
+(defvar my-tramp-cleanup-idle-timer
+  (run-with-idle-timer 10 'repeat #'my-tramp-cleanup)
+  "Holds the idle timer object for periodic calls to my-tramp-cleanup.")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Define some hook functions (then install them).
@@ -888,7 +889,7 @@ killed."
 	sh-indent-for-case-label 0
 	sh-indent-after-continuation 'always)
 
-  (set-fill-column 100)
+  (set-fill-column 95)
 
   (my-n-column-tabs 8)
 

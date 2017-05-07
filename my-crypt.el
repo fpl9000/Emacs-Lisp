@@ -78,7 +78,8 @@ package requires the use of GPG, because it formats the command line using optio
 syntax that only GPG accepts.")
 
 (defvar my-crypt-program-hashes (if my-win32
-				  '("2f49d4abd57c529a3f5917f10e73b85b4115fbdc")
+				  '("bb38a22e567e32147cfd69b68988ec80bcf29a66"
+				    "2f49d4abd57c529a3f5917f10e73b85b4115fbdc")
 				  (if (file-executable-p "/usr/local/bin/gpg")
 				      '("...")
 				    (if (file-executable-p "/usr/bin/gpg")
@@ -417,8 +418,6 @@ only verifying a clearsigned message."
   "Perform sanity checks."
   (interactive)
   (message "Performing sanity checks ...")
-  (if (not (file-directory-p "c:/temp"))
-      (error "Directory c:/temp does not exist!"))
   (if (not (stringp my-crypt-program-path))
       (error "my-crypt-program-path is not set properly!"))
   (if (not (file-exists-p my-crypt-program-path))
@@ -427,9 +426,8 @@ only verifying a clearsigned message."
       (error "%s is not executable!" my-crypt-program-path))
   (let ((program-hash (car (split-string (my-command (concat "sha1sum -b " my-crypt-program-path)
 						     nil t)))))
-    (dolist (hash my-crypt-program-hashes)
-      (if (not (string= program-hash hash))
-	  (error "%s failed hash check!" my-crypt-program-path))))
+    (if (not (member program-hash my-crypt-program-hashes))
+	(error "%s failed hash check!" my-crypt-program-path)))
   (if (null my-crypt-bash-is-ok)
       (unwind-protect
 	  (progn
